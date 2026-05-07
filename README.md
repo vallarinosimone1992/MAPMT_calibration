@@ -1,8 +1,6 @@
 # MAPMT_calibration
 
-Standalone C++/ROOT suite for calibrating MAPMTs read out with CLAS12
-RICH/MAROC-like electronics. It was created next to `clas_RICH_software`
-without modifying the original tree.
+Standalone C++/ROOT suite for calibrating MAPMTs read out with MAROC electronics and CODA DAQ.
 
 The suite keeps the useful legacy text formats, but removes many hard-coded
 assumptions from the analysis code. It uses `MAPMT_SUITE` as the suite root,
