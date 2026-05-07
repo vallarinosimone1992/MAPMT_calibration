@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmapmt_calibration_lib.a CMakeFiles/mapmt_calibration_lib.dir/src/DetectorConfig.cpp.o CMakeFiles/mapmt_calibration_lib.dir/src/HardwareMap.cpp.o CMakeFiles/mapmt_calibration_lib.dir/src/ScalerPedestalAnalyzer.cpp.o CMakeFiles/mapmt_calibration_lib.dir/src/TimeCalibration.cpp.o
+/usr/bin/ranlib libmapmt_calibration_lib.a

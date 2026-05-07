@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/simone/Work/BNL/EIC/ePIC/dRICH/TestBeam/various/MAPMTs/MAPMT_calibration/ana/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
