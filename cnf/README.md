@@ -1,12 +1,13 @@
-# Configurazione
+# Configuration
 
-Questa cartella contiene tutti i file necessari per interpretare i canali e
-calibrare un setup MAPMT.
+This directory contains the files needed to interpret channels and run the
+offline calibration:
 
-- `detector.conf`: costanti generali dell'elettronica e convenzioni di decodifica.
-- `maps/`: mappe hardware, soglie, gain e piedistalli medi.
+- `detector.conf`: general electronics constants and decoding conventions.
+- `maps/`: hardware maps, thresholds, gains, and average pedestal files.
 
-I file `maps/setup.txt`, `maps/fiber.map`, `maps/threshold.txt`, `maps/gain.txt`
-sono la configurazione di default, copiata dal setup legacy `TwoModules`.
+The files `maps/setup.txt`, `maps/fiber.map`, `maps/threshold.txt`, and
+`maps/gain.txt` are the default configuration, copied from the legacy
+`TwoModules` setup.
 
-Per un nuovo progetto, il file piu importante da riscrivere e `maps/fiber.map`.
+For a new project, the most important file to rewrite is `maps/fiber.map`.

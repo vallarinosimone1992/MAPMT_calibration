@@ -1,58 +1,66 @@
-# Note sul software CLAS12 RICH MAPMT
+# Notes On The CLAS12 RICH MAPMT Software
 
-Questa sintesi deriva dai file in `clas_RICH_software/rich_sw`.
+This summary is based on the files in `clas_RICH_software/rich_sw`.
 
-## Flusso legacy
+## Legacy Flow
 
-1. Sul crate RICH si esegue la configurazione CODA/SSP con `ssptest_ConfigureAll`.
-2. Gli script `sw/daq/thr_scan.sh`, `rich_pedestal.sh`, `rich_dark.sh` e `rate_scan.sh` chiamano `ssptest_ScalerAll`.
-3. L'output `ssprich_scaler_???.txt` viene concatenato in `rich_pedestal_YYYYMMDD_HHMMSS.txt`.
-4. Fuori dal crate, `sw/ana/ped/recoScalers.sh` lancia ROOT con `richReco.c`.
-5. `richReco.c` usa `richScalers.h`, che legge mappa hardware, soglie, gain e file scaler, poi produce `histo.root`, `stat.txt`, `chip.txt`, `rate.txt`, `hot.txt`, `dead.txt`, `noisy.txt` e PDF.
+1. On the RICH crate, CODA/SSP configuration is performed with `ssptest_ConfigureAll`.
+2. The scripts `sw/daq/thr_scan.sh`, `rich_pedestal.sh`, `rich_dark.sh`, and `rate_scan.sh` call `ssptest_ScalerAll`.
+3. The `ssprich_scaler_???.txt` output is concatenated into `rich_pedestal_YYYYMMDD_HHMMSS.txt`.
+4. Off the crate, `sw/ana/ped/recoScalers.sh` runs ROOT with `richReco.c`.
+5. `richReco.c` uses `richScalers.h`, which reads the hardware map, thresholds, gains, and scaler file, then produces `histo.root`, `stat.txt`, `chip.txt`, `rate.txt`, `hot.txt`, `dead.txt`, `noisy.txt`, and PDFs.
 
-## File di configurazione importanti
+## Important Configuration Files
 
-- `maps/*/setup.txt`: prime 23 righe di header SSP, poi righe `slot fiber nasics`. Il codice legacy scarta sempre 23 righe.
-- `maps/*/fiber.map`: righe `slot fiber asic module pmt tile`. E il file piu importante per trasportare il software a una geometria diversa.
-- `maps/*/threshold.txt` o `threshold_25.txt`: righe `slot fiber asic threshold`.
-- `maps/*/gain.txt`: righe `slot fiber channel gain`, dove `channel` e 0..191 e viene convertito in `asic=channel/64`, `maroc=channel%64`.
-- `maps/*/PmtPedestal.txt`: media e RMS per ASIC/PMT, formato `slot fiber asic module pmt mean rms`.
-- `sw/cnf/generate/thr/thrCalc.c`: genera soglie come `ceil(mean_pedestal_chip) + offset`.
-- `sw/cnf/generate/thr/thrCalc_file_2x.c`: include il fattore ADC/TDC 2.0, commentato come 0.7 fC ADC e 1.4 fC TDC.
-- `sw/cnf/generate/gain/gain.c`: trasforma una tabella canale-gain in registri CODA a gruppi da 16 canali.
+- `maps/*/setup.txt`: first 23 lines are an SSP header, followed by `slot fiber nasics` rows. The legacy code always skips 23 lines.
+- `maps/*/fiber.map`: rows `slot fiber asic module pmt tile`. This is the most important file to port the software to a different geometry.
+- `maps/*/threshold.txt` or `threshold_25.txt`: rows `slot fiber asic threshold`.
+- `maps/*/gain.txt`: rows `slot fiber channel gain`, where `channel` is 0..191 and is converted as `asic=channel/64`, `maroc=channel%64`.
+- `maps/*/PmtPedestal.txt`: mean and RMS per ASIC/PMT, format `slot fiber asic module pmt mean rms`.
+- `sw/cnf/generate/thr/thrCalc.c`: generates thresholds as `ceil(mean_pedestal_chip) + offset`.
+- `sw/cnf/generate/thr/thrCalc_file_2x.c`: includes the ADC/TDC factor 2.0, commented as 0.7 fC ADC and 1.4 fC TDC.
+- `sw/cnf/generate/gain/gain.c`: converts a channel-gain table into CODA registers in groups of 16 channels.
 
-## Piedistalli
+## Pedestals
 
-Nel legacy il piedistallo non e una media diretta dei campioni ADC. Lo scan soglia produce, per ogni canale MAROC, un istogramma `rate vs threshold`; la media del piedistallo e calcolata come media pesata della soglia con peso uguale al rate. Il file `chip.txt` contiene poi la media dei 64 canali di un ASIC/PMT e viene usato per proporre le soglie.
+In the legacy code the pedestal is not a direct mean of ADC samples. The
+threshold scan produces a `rate vs threshold` histogram for each MAROC channel;
+the pedestal mean is computed as the threshold mean weighted by the rate. The
+`chip.txt` file then contains the mean over the 64 channels of one ASIC/PMT and
+is used to propose thresholds.
 
-Valori hard-coded nel legacy:
+Hard-coded legacy values:
 
-- clock scaler: `125E6`;
-- threshold default: `230`;
-- gain default: `64`;
-- range piedistallo accettato: 150..220 DAC;
-- canale rumoroso: RMS piedistallo > 4 DAC;
-- regione flat dark rate: 400..425 DAC;
-- shoulder vicino soglia: `threshold..threshold+25`;
-- mappa MAROC-anodo Hamamatsu cablata nel costruttore di `richScalers`.
+- scaler clock: `125E6`;
+- default threshold: `230`;
+- default gain: `64`;
+- accepted pedestal range: 150..220 DAC;
+- noisy channel: pedestal RMS > 4 DAC;
+- flat dark-rate region: 400..425 DAC;
+- threshold shoulder: `threshold..threshold+25`;
+- Hamamatsu MAROC-to-anode map hard-coded in the `richScalers` constructor.
 
-## Tempo/TDC
+## Time/TDC
 
-In questa copia del software non c'e una vera analisi di calibrazione temporale TDC. Il solo file dedicato e `sw/daq/rich_tdc.sh`, che chiama `ssptest_TDCAll` e rinomina `ssprich_tdc.bin` con parametri nel nome (`BL1`, frequenza, finestra, lookback). Non e presente un decoder documentato del binario.
+This copy of the software does not contain a real TDC time-calibration analysis.
+The only dedicated file is `sw/daq/rich_tdc.sh`, which calls `ssptest_TDCAll`
+and renames `ssprich_tdc.bin` with parameters in the filename (`BL1`,
+frequency, window, lookback). No documented decoder for the binary format is
+present here.
 
-Per questo la nuova suite separa il problema in due layer:
+For this reason, the new suite separates the problem into two layers:
 
-- acquisizione/decoder TDC specifico della DAQ;
-- calibrazione tempo su hit gia decodificati in testo o CSV.
+- TDC acquisition/decoding specific to the DAQ;
+- time calibration on already-decoded hits in text or CSV form.
 
-Il nuovo comando `time` lavora sul secondo layer e produce offset per canale rispetto a un canale di riferimento o alla media globale.
+The new `time` command works on the second layer and produces per-channel
+offsets with respect to a reference channel or to the global mean.
 
-## Criticita nel passaggio a un nuovo progetto
+## Migration Risks For A New Project
 
-- La decodifica `absChannel -> slot/fiber/asic/channel` assume `slot_base=3`. Se i nuovi slot partono da 13, 0 o altro, va cambiato.
-- `NSECTORS=2`, `NPMTS=391`, `NTILES=138` erano dimensioni del RICH CLAS12; nel nuovo codice non sono richieste per l'analisi, ma restano implicite nei vecchi display.
-- La geometria di display CLAS12 in `InitDisplay()` non e portabile. Il nuovo software conserva la calibrazione numerica, non la grafica a sagoma RICH.
-- `setup.txt` non e autoesplicativo: e meglio considerare `fiber.map` come sorgente primaria della geometria attiva.
-- I file di gain e soglia devono essere coerenti con la stessa mappa. Mismatch tra DAQ e `fiber.map` produce canali scartati o PMT sbagliati.
-- Il formato TDC binario `ssprich_tdc.bin` resta fuori da questa suite: la
-  calibrazione temporale richiede un formato decodificato esplicito.
+- The `absChannel -> slot/fiber/asic/channel` decoding assumes `slot_base=3`. If the new slots start at 13, 0, or anything else, change it.
+- `NSECTORS=2`, `NPMTS=391`, and `NTILES=138` were CLAS12 RICH dimensions. The new code does not need them for numerical analysis, but they remain implicit in the old displays.
+- The CLAS12 display geometry in `InitDisplay()` is not portable. The new software keeps the numerical calibration, not the RICH-shaped display graphics.
+- `setup.txt` is not self-describing; treat `fiber.map` as the primary source of active geometry.
+- Gain and threshold files must be coherent with the same map. Mismatches between DAQ and `fiber.map` produce discarded channels or wrong PMT assignments.
+- The binary TDC format `ssprich_tdc.bin` remains outside this suite: time calibration requires an explicit decoded format.

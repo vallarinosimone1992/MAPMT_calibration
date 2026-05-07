@@ -1,21 +1,21 @@
-# Legacy TwoModules test data
+# Legacy TwoModules Test Data
 
-Questa cartella contiene un piccolo set di calibrazioni legacy copiato da:
+This directory contains a small legacy calibration set copied from:
 
 ```text
 clas_RICH_software/rich_sw/maps/TwoModules/
 ```
 
-File:
+Files:
 
-- `PmtPedestal.txt`: piedistalli gia ricostruiti, una riga per ASIC/PMT.
-- `threshold_25.expected.txt`: soglie legacy attese con offset 25.
-- `gain.txt`: gain per canale, formato legacy.
-- `fiber.map`: mappa elettronica-geometria del setup TwoModules.
+- `PmtPedestal.txt`: reconstructed pedestal summary, one row per ASIC/PMT.
+- `threshold_25.expected.txt`: expected legacy thresholds with offset 25.
+- `gain.txt`: per-channel gain, legacy format.
+- `fiber.map`: electronics-to-geometry map for the TwoModules setup.
 
-Non e presente un file scaler grezzo completo prodotto da `ssptest_ScalerAll`;
-quindi questo set testa la fase di esportazione soglie da piedistalli gia
-ricostruiti, non il fit/scansione completa dei piedistalli da scaler.
+A complete raw scaler file produced by `ssptest_ScalerAll` is not available
+here. This fixture therefore tests threshold export from already-reconstructed
+pedestals, not the full scaler-based pedestal reconstruction.
 
 Test:
 
@@ -31,12 +31,10 @@ diff -u \
   "$MAPMT_SUITE/results/test_legacy_threshold_25.txt"
 ```
 
-Il `diff` deve essere vuoto.
+The `diff` must be empty.
 
-Per esportare una calibrazione verso il software di analisi, i file piu utili
-sono:
+The most useful files to export toward an external analysis package are:
 
-- `threshold_25.expected.txt` o una nuova soglia prodotta con il comando sopra;
-- `gain.txt`;
-- `fiber.map`, se il software esterno deve tradurre slot/fiber/ASIC/canale in
-  modulo/PMT/pixel.
+- `threshold_25.expected.txt`, or a new threshold file produced with the command above.
+- `gain.txt`.
+- `fiber.map`, if the external package must translate slot/fiber/ASIC/channel into module/PMT/pixel.

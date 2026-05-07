@@ -1,12 +1,10 @@
-# Mappe e calibrazioni locali
+# Local Maps And Calibrations
 
-Questa cartella contiene copie locali dei file di configurazione/calibrazione
-necessari, cosi `MAPMT_calibration` non dipende da `clas_RICH_software`.
+This directory contains local copies of the configuration and calibration files
+needed by the suite. Runtime code must not read from `clas_RICH_software`.
 
-## Default
-
-I file al primo livello sono la configurazione di default, copiata da
-`TwoModules`:
+Top-level files are the default configuration copied from the legacy
+`TwoModules` setup:
 
 - `setup.txt`
 - `fiber.map`
@@ -14,22 +12,22 @@ I file al primo livello sono la configurazione di default, copiata da
 - `gain.txt`
 - `PmtPedestal.txt`
 
-Sono i file usati negli esempi del `README.md`.
+These are the files used by the examples in the top-level `README.md`.
 
-## Configurazioni legacy archiviate
+## Archived Legacy Configurations
 
-- `RICH1/`: mappa e soglie per RICH1.
-- `RICH2/`: mappa, soglie, gain e `chip.txt` per RICH2.
-- `TwoModules/`: configurazione completa a due moduli, usata come default.
+- `RICH1/`: map and thresholds for RICH1.
+- `RICH2/`: map, thresholds, gain, and `chip.txt` for RICH2.
+- `TwoModules/`: complete two-module configuration, used as the default source.
 
-## Quali file modificare per un nuovo progetto
+## Files To Edit For A New Project
 
-Per rendere operativo un nuovo setup devi creare o aggiornare almeno:
+To operate a new setup, create or update at least:
 
-- `fiber.map`: `slot fiber asic module pmt tile`;
-- `setup.txt`: output coerente con `ssptest_ConfigureAll`, oppure file equivalente;
-- `threshold.txt`: `slot fiber asic threshold_dac`;
-- `gain.txt`: `slot fiber channel gain`, con `channel = 64*asic + maroc`.
+- `fiber.map`: slot/fiber/ASIC to module/PMT/tile mapping.
+- `setup.txt`: output consistent with `ssptest_ConfigureAll`, or an equivalent file.
+- `threshold.txt`: one threshold per active ASIC.
+- `gain.txt`: one gain per channel.
 
-`PmtPedestal.txt` non e obbligatorio per l'analisi di un nuovo run, ma e utile
-come riferimento o per generare soglie iniziali.
+`PmtPedestal.txt` is not required to analyze a new run, but it is useful as a
+reference or to generate initial thresholds.

@@ -1,16 +1,16 @@
-# Calibrazione temporale
+# Time Calibration
 
-La calibrazione temporale del nuovo software lavora su hit TDC gia decodificati
-in formato testo/CSV. Gli script DAQ producono correttamente file binari
-`ssprich_tdc_*.bin`; la decodifica di quei binari resta parte della catena
-esterna esistente e non viene duplicata in questa directory.
+The new time-calibration code works on TDC hits already decoded into text/CSV.
+The DAQ scripts correctly produce binary files named `ssprich_tdc_*.bin`;
+decoding those binaries remains part of the existing external chain and is not
+duplicated in this directory.
 
-## Input accettati
+## Accepted Input
 
-Il comando legge righe numeriche, separate da spazi o virgole. Le righe vuote e
-la parte dopo `#` sono ignorate.
+The command reads numeric rows separated by spaces or commas. Empty lines and
+anything after `#` are ignored.
 
-Formati:
+Formats:
 
 ```text
 absChannel time [tot]
@@ -18,22 +18,22 @@ slot fiber asic maroc time [tot]
 event slot fiber asic maroc time [tot]
 ```
 
-Le colonne opzionali dopo `time`, per esempio `tot`, sono ignorate. Con
-`--format auto` il formato viene dedotto dal numero di colonne:
+Optional columns after `time`, for example `tot`, are ignored. With
+`--format auto`, the format is inferred from the number of columns:
 
-- 2 o 3 colonne: `abs`;
-- 5 colonne: `address`;
-- 6 o piu colonne: `event-address`.
+- 2 or 3 columns: `abs`
+- 5 columns: `address`
+- 6 or more columns: `event-address`
 
-`absChannel` usa la convenzione legacy:
+`absChannel` uses the legacy convention:
 
 ```text
 absChannel = maroc + 64*asic + 192*fiber + 192*32*(slot - slot_base)
 ```
 
-Il parametro `slot_base` si trova in `cnf/detector.conf`.
+The `slot_base` parameter is defined in `cnf/detector.conf`.
 
-## Comando
+## Command
 
 ```bash
 export MAPMT_SUITE=/path/to/MAPMT_calibration
@@ -44,55 +44,55 @@ export MAPMT_SUITE=/path/to/MAPMT_calibration
   --reference 3:1:0:0
 ```
 
-Opzioni principali:
+Main options:
 
-- `--reference slot:fiber:asic:maroc`: canale usato come zero temporale.
-- `--min-entries N`: minimo numero di hit per calibrare un canale, default `20`.
-- `--bins N`: bin degli istogrammi temporali, default `400`.
-- `--min-time T` e `--max-time T`: range manuale degli istogrammi.
+- `--reference slot:fiber:asic:maroc`: channel used as the time zero.
+- `--min-entries N`: minimum number of hits required to calibrate a channel, default `20`.
+- `--bins N`: number of time-histogram bins, default `400`.
+- `--min-time T` and `--max-time T`: manual histogram range.
 
-Se `--reference` non viene dato, lo zero temporale e la media dei tempi medi di
-tutti i canali con statistica sufficiente.
+If `--reference` is not given, the time zero is the mean of the channel means
+for all channels with enough statistics.
 
 ## Output
 
-Il comando produce:
+The command produces:
 
 ```text
 time_offsets.csv
 time_calibration.root
 ```
 
-`time_offsets.csv` contiene una riga per canale:
+`time_offsets.csv` contains one row per channel:
 
 ```text
 slot,fiber,asic,maroc,pixel,module,pmt,tile,entries,mean_time,sigma_time,offset
 ```
 
-`offset` e calcolato come:
+`offset` is computed as:
 
 ```text
 offset = reference_mean_time - channel_mean_time
 ```
 
-Quindi un tempo corretto puo essere costruito come:
+A corrected time can therefore be built as:
 
 ```text
 time_corrected = time_raw + offset
 ```
 
-`time_calibration.root` contiene:
+`time_calibration.root` contains:
 
-- un TTree `time_offsets` con le stesse grandezze del CSV;
-- un istogramma `hTime_slot_fiber_asic_maroc` per ogni canale calibrato.
+- a `time_offsets` TTree with the same quantities as the CSV;
+- one `hTime_slot_fiber_asic_maroc` histogram per calibrated channel.
 
-## Note operative
+## Operational Notes
 
-Il confine della suite e intenzionale: acquisizione binaria con `ssptest_TDCAll`,
-decodifica esterna, calibrazione temporale offline su testo/CSV decodificato.
-Per questa directory e sufficiente che il decoder produca almeno `slot fiber
-asic maroc time` oppure `event slot fiber asic maroc time`.
+The suite boundary is intentional: binary acquisition with `ssptest_TDCAll`,
+external decoding, offline time calibration on decoded text/CSV. For this
+directory, it is enough that the decoder produces at least `slot fiber asic
+maroc time` or `event slot fiber asic maroc time`.
 
-La calibrazione attuale usa la media aritmetica della distribuzione temporale.
-Per dati reali con code, rumore o multi-picco puo essere meglio sostituire la
-media con un fit del picco principale o con una stima robusta in finestra.
+The current calibration uses the arithmetic mean of the time distribution. For
+real data with tails, noise, or multiple peaks, it may be better to replace the
+mean with a main-peak fit or a robust windowed estimator.

@@ -1,16 +1,20 @@
 # MAPMT_calibration
 
-Nuova suite C++/ROOT per calibrare MAPMT letti con elettronica tipo CLAS12 RICH/MAROC, creata accanto a `clas_RICH_software` senza modificarlo.
+Standalone C++/ROOT suite for calibrating MAPMTs read out with CLAS12
+RICH/MAROC-like electronics. It was created next to `clas_RICH_software`
+without modifying the original tree.
 
-La suite conserva i formati testuali utili del software legacy, ma rimuove molte assunzioni hard-coded dal codice di analisi. Usa `MAPMT_SUITE` come radice della suite, in analogia alla vecchia variabile `RICH_SUITE`.
+The suite keeps the useful legacy text formats, but removes many hard-coded
+assumptions from the analysis code. It uses `MAPMT_SUITE` as the suite root,
+following the role previously played by `RICH_SUITE`.
 
-E organizzata in tre aree principali:
+Main areas:
 
-- `ana/`: codice C++/ROOT, CLI `mapmt_calibrate` e documentazione tecnica dell'analisi.
-- `daq/`: script DAQ per produrre i file di calibrazione con `ssptest_*`.
-- `cnf/`: mappe, soglie, gain e costanti detector.
+- `ana/`: C++/ROOT offline code, the `mapmt_calibrate` CLI, and analysis docs.
+- `daq/`: DAQ scripts that produce calibration files through `ssptest_*`.
+- `cnf/`: detector constants, hardware maps, thresholds, and gains.
 
-`data/` e `results/` restano al livello principale come aree operative.
+`data/` and `results/` are top-level operational areas.
 
 ## Build
 
@@ -20,14 +24,15 @@ cmake -S "$MAPMT_SUITE/ana" -B "$MAPMT_SUITE/ana/build"
 cmake --build "$MAPMT_SUITE/ana/build"
 ```
 
-Richiede ROOT con `root-config`/CMake package disponibile.
+Requires ROOT with either `root-config` or a CMake package available.
 
-## Script DAQ
+## DAQ Scripts
 
-Gli script per produrre i file di calibrazione con `ssptest_*` sono in `daq/`.
-Sono wrapper dei file legacy `sw/daq`, ma con parametri raccolti in `daq/daq.env`.
+The scripts that produce calibration files with `ssptest_*` live in `daq/`.
+They are wrappers around the legacy `sw/daq` scripts, with parameters collected
+in `daq/daq.env`.
 
-Sulla macchina DAQ:
+On the DAQ machine:
 
 ```bash
 export MAPMT_SUITE=/path/to/MAPMT_calibration
@@ -40,18 +45,18 @@ vi daq.env
 ./rate_scan.sh 100 0 230
 ```
 
-Questi script richiedono CODA/SSP e connessione alla crate. L'analisi offline
-`mapmt_calibrate` richiede invece solo ROOT e i file dati gia prodotti.
+These scripts require CODA/SSP and a connection to the crate. The offline
+`mapmt_calibrate` analysis requires only ROOT and already-produced data files.
 
-## Comandi principali
+## Main Commands
 
-Ispezione mappa:
+Inspect the hardware map:
 
 ```bash
 "$MAPMT_SUITE/ana/build/mapmt_calibrate" inspect-map
 ```
 
-Analisi piedistalli da file scaler:
+Analyze pedestals from a scaler file:
 
 ```bash
 "$MAPMT_SUITE/ana/build/mapmt_calibrate" pedestal \
@@ -59,15 +64,15 @@ Analisi piedistalli da file scaler:
   --output "$MAPMT_SUITE/results/pedestal_run"
 ```
 
-Output principali:
+Main outputs:
 
-- `channel_stats.csv`: statistiche per canale;
-- `chip_pedestals.txt`: formato compatibile con il vecchio `thrCalc.c`;
-- `thresholds_suggested.txt`: soglie `ceil(media_piedistallo_ASIC) + offset`;
-- `noisy_channels.txt` e `dead_channels.txt`;
-- `histo.root`: istogrammi ROOT `rate vs threshold` e TTree riassuntivo.
+- `channel_stats.csv`: per-channel statistics.
+- `chip_pedestals.txt`: ASIC/PMT pedestal summary compatible with the legacy `thrCalc.c` input.
+- `thresholds_suggested.txt`: thresholds computed as `ceil(ASIC_pedestal_mean) + offset`.
+- `noisy_channels.txt` and `dead_channels.txt`.
+- `histo.root`: ROOT `rate vs threshold` histograms and a summary TTree.
 
-Generazione soglie da `chip_pedestals.txt`:
+Generate thresholds from `chip_pedestals.txt`:
 
 ```bash
 "$MAPMT_SUITE/ana/build/mapmt_calibrate" thresholds \
@@ -76,7 +81,7 @@ Generazione soglie da `chip_pedestals.txt`:
   --offset 25
 ```
 
-Calibrazione temporale da hit TDC gia decodificati:
+Time calibration from already-decoded TDC hits:
 
 ```bash
 "$MAPMT_SUITE/ana/build/mapmt_calibrate" time \
@@ -86,24 +91,28 @@ Calibrazione temporale da hit TDC gia decodificati:
   --reference 3:1:0:0
 ```
 
-Formati TDC supportati:
+Supported TDC text formats:
 
-- `abs`: `absChannel time [tot]`;
-- `address`: `slot fiber asic maroc time [tot]`;
-- `event-address`: `event slot fiber asic maroc time [tot]`;
-- `auto`: inferenza dal numero di colonne.
+- `abs`: `absChannel time [tot]`
+- `address`: `slot fiber asic maroc time [tot]`
+- `event-address`: `event slot fiber asic maroc time [tot]`
+- `auto`: infer the format from the number of columns
 
-I file binari `ssprich_tdc_*.bin` sono l'output atteso della DAQ. La loro
-decodifica resta esterna a questa suite; `mapmt_calibrate time` parte dal file
-TDC gia decodificato in uno dei formati testuali sopra.
+The binary files `ssprich_tdc_*.bin` are the expected DAQ output. Their decoding
+is intentionally external to this suite; `mapmt_calibrate time` starts from TDC
+hits already decoded into one of the text formats above.
 
-Per dettagli su input, output e uso degli offset temporali vedi
+For details on the time-calibration input, output, and offset convention, see
 `ana/docs/time_calibration.md`.
 
-## File legacy da controllare prima della migrazione
+## Legacy Files To Check Before Migration
 
-Vedi `ana/docs/legacy_CLAS12_RICH_notes.md`. In breve, i file critici sono `fiber.map`, `setup.txt`, `threshold*.txt` e `gain.txt`. La variabile piu pericolosa e `slot_base`: nel legacy la formula degli absolute channel assume slot iniziale 3.
+See `ana/docs/legacy_CLAS12_RICH_notes.md`. In short, the critical files are
+`fiber.map`, `setup.txt`, `threshold*.txt`, and `gain.txt`. The most dangerous
+parameter is `slot_base`: the legacy absolute-channel formula assumes the first
+slot is 3.
 
-La suite contiene copie locali dei file legacy necessari in `cnf/maps/`, quindi non deve leggere nulla da `clas_RICH_software` per girare.
+The suite contains local copies of the required legacy files under `cnf/maps/`,
+so it does not need to read anything from `clas_RICH_software` at runtime.
 
-Per il significato dei parametri vedi anche `ana/docs/configuration_files.md`.
+For parameter meanings, see also `ana/docs/configuration_files.md`.

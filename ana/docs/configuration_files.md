@@ -1,48 +1,49 @@
-# File di configurazione
+# Configuration Files
 
-Ci sono due famiglie di configurazione:
+There are two configuration families:
 
-1. parametri DAQ per eseguire `ssptest_*`;
-2. mappe/calibrazioni offline per interpretare i canali e produrre soglie, gain e offset.
+1. DAQ parameters used to run `ssptest_*`.
+2. Offline maps and calibrations used to interpret channels and produce thresholds, gains, and offsets.
 
-Le copie locali dei file legacy sono in `cnf/maps/`. I file al primo livello
-(`cnf/maps/fiber.map`, `cnf/maps/setup.txt`,
-`cnf/maps/threshold.txt`, `cnf/maps/gain.txt`) sono la
-configurazione di default e non richiedono path verso `clas_RICH_software`.
+Local copies of the legacy files are under `cnf/maps/`. The top-level files
+there (`cnf/maps/fiber.map`, `cnf/maps/setup.txt`, `cnf/maps/threshold.txt`,
+and `cnf/maps/gain.txt`) are the default configuration and do not require any
+path into `clas_RICH_software`.
 
-`MAPMT_SUITE` e la radice della suite, equivalente nuovo di `RICH_SUITE`.
+`MAPMT_SUITE` is the suite root, the replacement for `RICH_SUITE`.
 
-## 1. Configurazione DAQ: `daq/daq.env`
+## 1. DAQ Configuration: `daq/daq.env`
 
-Questo file non viene usato dall'analisi C++/ROOT. Serve solo agli script in
-`daq/`.
+This file is not used by the C++/ROOT analysis. It is used only by the scripts
+in `daq/`.
 
-Parametri essenziali:
+Essential parameters:
 
-- `MAPMT_DAQ_EXEDIR`: percorso degli eseguibili `ssptest_ConfigureAll`, `ssptest_ScalerAll`, `ssptest_TDCAll`.
-- `MAPMT_SCALER_DURATION`: tempo di conteggio per ogni punto di soglia.
-- `MAPMT_Q`: argomento `Q` di `ssptest_ScalerAll`; nel legacy era `0`.
-- `MAPMT_DEFAULT_THRESHOLD`: soglia usata da `configure_all.sh` e da `rate_scan.sh`.
-- `MAPMT_DEFAULT_GAIN`: gain uniforme, se non si usa la mappa.
-- `MAPMT_DEFAULT_SUPPRESS`: terzo argomento di `ssptest_ConfigureAll`; nel legacy era `0`.
-- `MAPMT_PEDESTAL_START/STOP/GAIN`: range dello scan piedistallo.
-- `MAPMT_DARK_START/STOP/GAIN`: range dello scan dark.
-- `MAPMT_RATE_RUNS`, `MAPMT_RATE_FIXED_THRESHOLD`, `MAPMT_RATE_GAIN`: rate scan a soglia fissa.
-- `MAPMT_TDC_THRESHOLD`, `MAPMT_TDC_EVENTS`, `MAPMT_TDC_MODE`: argomenti di `ssptest_TDCAll`.
+- `MAPMT_DAQ_EXEDIR`: path to `ssptest_ConfigureAll`, `ssptest_ScalerAll`, and `ssptest_TDCAll`.
+- `MAPMT_SCALER_DURATION`: counting time for each threshold point.
+- `MAPMT_Q`: `Q` argument passed to `ssptest_ScalerAll`; legacy value was `0`.
+- `MAPMT_DEFAULT_THRESHOLD`: threshold used by `configure_all.sh` and `rate_scan.sh`.
+- `MAPMT_DEFAULT_GAIN`: uniform gain when the gain map is not used.
+- `MAPMT_DEFAULT_SUPPRESS`: third argument to `ssptest_ConfigureAll`; legacy value was `0`.
+- `MAPMT_PEDESTAL_START/STOP/GAIN`: pedestal scan range.
+- `MAPMT_DARK_START/STOP/GAIN`: dark-rate scan range.
+- `MAPMT_RATE_RUNS`, `MAPMT_RATE_FIXED_THRESHOLD`, `MAPMT_RATE_GAIN`: fixed-threshold rate scan settings.
+- `MAPMT_TDC_THRESHOLD`, `MAPMT_TDC_EVENTS`, `MAPMT_TDC_MODE`: arguments for `ssptest_TDCAll`.
 
-Nel legacy `gain=0` significa "usa la gain map caricata dalla configurazione"; `gain=64`
-significa gain uniforme 64.
+In the legacy scripts, `gain=0` means "use the configured gain map"; `gain=64`
+means uniform gain 64.
 
 ## 2. `setup.txt`
 
-Prodotto da `ssptest_ConfigureAll` e usato per sapere quali fibre/ASIC sono stati visti dalla DAQ.
+Produced by `ssptest_ConfigureAll` and used to identify which fibers/ASICs were
+seen by the DAQ.
 
-Il formato legacy ha:
+The legacy format has:
 
-- 23 righe iniziali di header;
-- poi righe `slot fiber nasics`.
+- 23 initial header lines.
+- Then rows `slot fiber nasics`.
 
-Esempio:
+Example:
 
 ```text
 3 0 3
@@ -50,7 +51,8 @@ Esempio:
 3 2 0
 ```
 
-Nel vecchio codice le prime 23 righe sono scartate sempre. Nel nuovo software il numero si cambia con:
+The old code always skipped the first 23 lines. In the new software this number
+is controlled by:
 
 ```text
 setup_header_lines = 23
@@ -60,13 +62,13 @@ in `cnf/detector.conf`.
 
 ## 3. `fiber.map`
 
-E la mappa piu importante. Associa elettronica e geometria:
+This is the most important map. It links electronics to detector geometry:
 
 ```text
 slot fiber asic module pmt tile
 ```
 
-Esempio:
+Example:
 
 ```text
 3 1 0 1 1 1
@@ -74,58 +76,60 @@ Esempio:
 3 1 2 1 3 1
 ```
 
-Significa che nello slot 3, fibra 1, ASIC 0 si trova il PMT 1 del modulo 1, tile 1.
+This means that slot 3, fiber 1, ASIC 0 corresponds to PMT 1 in module 1,
+tile 1.
 
-Per un nuovo progetto devi ricostruire questo file con:
+For a new project, rebuild this file with:
 
-- slot SSP reali;
-- fibre collegate;
-- ASIC presenti per fibra;
-- numero modulo;
-- numero PMT;
-- tile/gruppo meccanico se utile.
+- real SSP slots;
+- connected fibers;
+- ASICs present on each fiber;
+- module number;
+- PMT number;
+- tile or mechanical group, if useful.
 
-Se questo file e sbagliato, tutta la calibrazione viene assegnata al PMT/canale sbagliato.
+If this file is wrong, the whole calibration will be assigned to the wrong
+PMT/channel.
 
 ## 4. `threshold.txt`
 
-Formato:
+Format:
 
 ```text
 slot fiber asic threshold_dac
 ```
 
-Esempio:
+Example:
 
 ```text
 3 1 0 210
 3 1 1 214
 ```
 
-Nel flusso pedestal si genera come:
+The pedestal flow generates it as:
 
 ```text
-threshold = ceil(media_piedistallo_ASIC) + offset
+threshold = ceil(ASIC_pedestal_mean) + offset
 ```
 
-con offset tipico `25`.
+with a typical offset of `25`.
 
 ## 5. `gain.txt`
 
-Formato:
+Format:
 
 ```text
 slot fiber channel gain
 ```
 
-dove `channel` va da 0 a 191:
+where `channel` is from 0 to 191:
 
 ```text
 asic = channel / 64
 maroc = channel % 64
 ```
 
-Esempio:
+Example:
 
 ```text
 3 0 0 64
@@ -133,28 +137,31 @@ Esempio:
 3 0 64 70
 ```
 
-Se manca, il nuovo software usa `default_gain`.
+If the file is missing, the new software uses `default_gain`.
 
 ## 6. `PmtPedestal.txt` / `chip_pedestals.txt`
 
-Formato:
+Format:
 
 ```text
 slot fiber asic module pmt mean rms
 ```
 
-E il riassunto per ASIC/PMT usato per generare `threshold.txt`.
+This is the ASIC/PMT summary used to generate `threshold.txt`.
 
 ## 7. `cnf/detector.conf`
 
-Questo file contiene costanti dell'elettronica e convenzioni di decodifica. I parametri da controllare in un nuovo setup sono:
+This file contains electronics constants and decoding conventions. Parameters
+to check for a new setup:
 
-- `slot_base`: nella formula legacy `absChannel = maroc + 64*asic + 192*fiber + 192*32*(slot-slot_base)`. Per CLAS12 era `3`.
-- `clock_hz`: clock reference scaler, legacy `125000000`.
-- `max_fibers`, `n_asics`, `n_pixels`: struttura dell'elettronica.
-- `threshold_min`, `threshold_max`: range atteso per gli scan.
-- `flat_rate_min`, `flat_rate_max`: regione usata per stimare il dark rate in plateau.
-- `shoulder_range`: regione vicino alla soglia.
-- `noisy_pedestal_rms`: taglio per canali rumorosi.
+- `slot_base`: in the legacy formula `absChannel = maroc + 64*asic + 192*fiber + 192*32*(slot-slot_base)`. For CLAS12 this was `3`.
+- `clock_hz`: scaler reference clock, legacy value `125000000`.
+- `max_fibers`, `n_asics`, `n_pixels`: electronics structure.
+- `threshold_min`, `threshold_max`: expected scan range.
+- `flat_rate_min`, `flat_rate_max`: region used to estimate the dark-rate plateau.
+- `shoulder_range`: region close to the threshold.
+- `noisy_pedestal_rms`: cut used to tag noisy channels.
 
-La mappa MAROC-anodo Hamamatsu e ancora quella legacy CLAS12. Se il nuovo cablaggio o il modello MAPMT cambia, va aggiornata nel codice o resa configurabile.
+The Hamamatsu MAROC-to-anode map is still the legacy CLAS12 map. If the new
+cabling or MAPMT model changes, it must be updated in code or made
+configurable.

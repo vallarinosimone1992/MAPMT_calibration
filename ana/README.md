@@ -1,11 +1,11 @@
-# Analisi
+# Analysis
 
-Questa cartella contiene tutto il software offline C++/ROOT:
+This directory contains the offline C++/ROOT software:
 
-- `src/`: implementazione;
-- `include/`: header pubblici;
-- `docs/`: note tecniche su file legacy e configurazione;
-- `CMakeLists.txt`: build del comando `mapmt_calibrate`.
+- `src/`: implementation.
+- `include/`: public headers.
+- `docs/`: technical notes on configuration and legacy files.
+- `CMakeLists.txt`: build definition for the `mapmt_calibrate` command.
 
 Build:
 
@@ -14,7 +14,7 @@ cmake -S . -B build
 cmake --build build
 ```
 
-Esempio dalla radice della suite:
+Example from the suite root:
 
 ```bash
 export MAPMT_SUITE=/path/to/MAPMT_calibration

@@ -1,16 +1,17 @@
-# DAQ scripts
+# DAQ Scripts
 
-Questi script sono la versione importata e leggermente aggiornata degli script in
-`clas_RICH_software/rich_sw/sw/daq`. Devono essere eseguiti sulla macchina DAQ/crate
-dove sono disponibili `ssptest_ConfigureAll`, `ssptest_ScalerAll` e `ssptest_TDCAll`.
+These scripts are imported and lightly updated versions of the scripts in
+`clas_RICH_software/rich_sw/sw/daq`. They must be run on the DAQ/crate machine
+where `ssptest_ConfigureAll`, `ssptest_ScalerAll`, and `ssptest_TDCAll` are
+available.
 
-## Configurazione
+## Configuration
 
-1. Copiare `daq.env.example` in `daq.env`.
-2. Modificare almeno `MAPMT_DAQ_EXEDIR`, se i comandi `ssptest_*` non sono nel `PATH`.
-3. Controllare range, gain e durata degli scan.
+1. Copy `daq.env.example` to `daq.env`.
+2. Edit at least `MAPMT_DAQ_EXEDIR` if the `ssptest_*` commands are not in `PATH`.
+3. Check scan ranges, gains, and durations.
 
-Esempio:
+Example:
 
 ```bash
 export MAPMT_SUITE=/path/to/MAPMT_calibration
@@ -24,35 +25,35 @@ vi daq.env
 ./rich_tdc.sh
 ```
 
-## Parametri principali in `daq.env`
+## Main Parameters In `daq.env`
 
-- `MAPMT_SUITE`: radice della suite, equivalente moderno di `RICH_SUITE`.
-- `MAPMT_DAQ_EXEDIR`: directory degli eseguibili DAQ. Nel legacy era
-  `$CODA/src/rol/Linux_i686_vme/bin`.
-- `MAPMT_SETUP_FILE`: file `setup.txt` prodotto da `ssptest_ConfigureAll`.
-- `MAPMT_PED_DATA_DIR`: destinazione dei file scaler/piedistallo.
-- `MAPMT_TDC_DATA_DIR`: destinazione dei file TDC binari.
-- `MAPMT_Q`: argomento `Q` passato a `ssptest_ScalerAll`; nel legacy valeva `0`.
-- `MAPMT_SCALER_DURATION`: durata in secondi per ogni punto di soglia; nel legacy valeva `2`.
-- `MAPMT_DEFAULT_THRESHOLD`: soglia usata per configurazione/rate scan; nel legacy `230`.
-- `MAPMT_DEFAULT_GAIN`: gain uniforme di default; nel legacy `64`.
-- `MAPMT_PEDESTAL_START`, `MAPMT_PEDESTAL_STOP`, `MAPMT_PEDESTAL_GAIN`: scan piedistallo.
-- `MAPMT_DARK_START`, `MAPMT_DARK_STOP`, `MAPMT_DARK_GAIN`: scan dark rate.
-- `MAPMT_RATE_RUNS`, `MAPMT_RATE_FIXED_THRESHOLD`, `MAPMT_RATE_GAIN`: rate scan a soglia fissa.
-- `MAPMT_TDC_*`: parametri per `ssptest_TDCAll`.
+- `MAPMT_SUITE`: suite root, the modern replacement for `RICH_SUITE`.
+- `MAPMT_DAQ_EXEDIR`: directory containing the DAQ executables. In the legacy setup this was `$CODA/src/rol/Linux_i686_vme/bin`.
+- `MAPMT_SETUP_FILE`: `setup.txt` file produced by `ssptest_ConfigureAll`.
+- `MAPMT_PED_DATA_DIR`: destination for scaler/pedestal files.
+- `MAPMT_TDC_DATA_DIR`: destination for binary TDC files.
+- `MAPMT_Q`: `Q` argument passed to `ssptest_ScalerAll`; legacy value was `0`.
+- `MAPMT_SCALER_DURATION`: counting duration in seconds for each threshold point; legacy value was `2`.
+- `MAPMT_DEFAULT_THRESHOLD`: threshold used by configuration and rate scans; legacy value was `230`.
+- `MAPMT_DEFAULT_GAIN`: default uniform gain; legacy value was `64`.
+- `MAPMT_PEDESTAL_START`, `MAPMT_PEDESTAL_STOP`, `MAPMT_PEDESTAL_GAIN`: pedestal scan settings.
+- `MAPMT_DARK_START`, `MAPMT_DARK_STOP`, `MAPMT_DARK_GAIN`: dark-rate scan settings.
+- `MAPMT_RATE_RUNS`, `MAPMT_RATE_FIXED_THRESHOLD`, `MAPMT_RATE_GAIN`: fixed-threshold rate scan settings.
+- `MAPMT_TDC_*`: parameters for `ssptest_TDCAll`.
 
-`gain=0` mantiene il comportamento legacy: usare la gain map caricata dalla configurazione.
+`gain=0` preserves the legacy behavior: use the gain map loaded by the
+configuration.
 
-## Relazione con i file di calibrazione offline
+## Relationship With Offline Calibration Files
 
-Gli script DAQ producono file tipo:
+The DAQ scripts produce files such as:
 
 - `data/ped/rich_pedestal_YYYYMMDD_HHMMSS.txt`
 - `data/ped/rich_dark_YYYYMMDD_HHMMSS.txt`
 - `data/ped/rich_rate_YYYYMMDD_HHMMSS.txt`
 - `data/tdc/ssprich_tdc_*.bin`
 
-I file scaler in `data/ped` possono essere analizzati con:
+Scaler files in `data/ped` can be analyzed with:
 
 ```bash
 "$MAPMT_SUITE/ana/build/mapmt_calibrate" pedestal \
@@ -64,5 +65,5 @@ I file scaler in `data/ped` possono essere analizzati con:
   --output "$MAPMT_SUITE/results/pedestal_YYYYMMDD_HHMMSS"
 ```
 
-Il binario TDC e l'output corretto della DAQ. La decodifica resta nella catena
-esterna esistente; il comando offline `time` usa il file TDC gia decodificato.
+The binary TDC file is the correct DAQ output. Decoding remains in the existing
+external chain; the offline `time` command uses the already-decoded TDC file.
