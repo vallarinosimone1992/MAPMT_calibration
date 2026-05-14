@@ -130,6 +130,13 @@ threshold = ceil(ASIC_pedestal_mean) + offset
 
 with a typical offset of `25`.
 
+Only channels with a physical pedestal are used in `ASIC_pedestal_mean`.
+The accepted pedestal range is controlled by `pedestal_mean_min` and
+`pedestal_mean_max`. If an active ASIC has fewer than
+`min_pedestal_channels_per_asic` valid channels, it is written to
+`thresholds_skipped.txt` instead of receiving a nonphysical threshold such as
+`25`.
+
 The imported dRICH prototype `threshold.txt` has 20 entries, while the imported
 `setup.txt` selects 23 ASICs. Missing threshold entries fall back to
 `default_threshold` from `cnf/detector.conf`. This is acceptable for reading old
@@ -200,6 +207,10 @@ to check for a new setup:
 - `threshold_min`, `threshold_max`: expected scan range.
 - `flat_rate_min`, `flat_rate_max`: region used to estimate the dark-rate plateau.
 - `shoulder_range`: region close to the threshold.
+- `pedestal_mean_min`, `pedestal_mean_max`: accepted pedestal range for channels
+  used in ASIC-level suggested thresholds.
+- `min_pedestal_channels_per_asic`: minimum number of accepted channels needed
+  before an ASIC receives a suggested threshold.
 - `noisy_pedestal_rms`: cut used to tag noisy channels.
 
 The Hamamatsu MAROC-to-anode map is still the legacy CLAS12 map. If the new

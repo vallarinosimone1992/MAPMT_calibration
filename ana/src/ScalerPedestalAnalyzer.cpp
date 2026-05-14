@@ -118,6 +118,17 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   ensureOutputDir(options.outputDir);
 
   const auto& config = hardware_.config();
+  if (config.clockHz <= 0.0) throw std::runtime_error("clock_hz must be positive");
+  if (!(config.pedestalMeanMax >= config.pedestalMeanMin)) {
+    throw std::runtime_error("invalid pedestal mean acceptance range");
+  }
+  if (config.minPedestalChannelsPerAsic < 1 ||
+      config.minPedestalChannelsPerAsic > config.nPixels) {
+    throw std::runtime_error("min_pedestal_channels_per_asic must be in [1, n_pixels]");
+  }
+  if (config.thresholdMax < config.thresholdMin) {
+    throw std::runtime_error("invalid threshold histogram range");
+  }
   const int thresholdOffset =
       options.thresholdOffset >= 0 ? options.thresholdOffset : config.thresholdOffset;
 
@@ -137,8 +148,10 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   std::array<long long, 4> header{};
   int headerCount = 0;
   std::string line;
+  int lineNumber = 0;
 
   while (std::getline(input, line)) {
+    ++lineNumber;
     const auto values = parseScalars(line);
     if (values.empty()) continue;
 
@@ -149,7 +162,12 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
       header[headerCount++] = values[0];
       if (headerCount == static_cast<int>(header.size())) {
         currentThreshold = static_cast<int>(header[0]);
-        const auto ref = static_cast<unsigned long>(header[2]);
+        if (currentThreshold < 0) {
+          throw std::runtime_error("negative scaler threshold at line " +
+                                   std::to_string(lineNumber) + " in " +
+                                   options.input.string());
+        }
+        const long long ref = header[2];
         ++nBlocks;
         currentGoodReference = ref > 0;
         if (!currentGoodReference) ++badReferenceBlocks;
@@ -167,9 +185,21 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
       throw std::runtime_error("data row before scaler header in " + options.input.string());
     }
     if (!currentGoodReference) continue;
+    if (values.size() != 2) {
+      throw std::runtime_error("bad scaler data row at line " + std::to_string(lineNumber) +
+                               " in " + options.input.string());
+    }
 
     const int absoluteChannel = static_cast<int>(values[0]);
-    const int counts = static_cast<int>(values[1]);
+    const long long counts = values[1];
+    if (absoluteChannel < 0) {
+      throw std::runtime_error("negative absolute channel at line " + std::to_string(lineNumber) +
+                               " in " + options.input.string());
+    }
+    if (counts < 0) {
+      throw std::runtime_error("negative scaler counts at line " + std::to_string(lineNumber) +
+                               " in " + options.input.string());
+    }
     const Address address = hardware_.decodeAbsoluteChannel(absoluteChannel);
     if (!hardware_.isActive(AsicId{address.slot, address.fiber, address.asic})) continue;
 
@@ -193,6 +223,7 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   result.channelStatsCsv = options.outputDir / "channel_stats.csv";
   result.chipPedestalsTxt = options.outputDir / "chip_pedestals.txt";
   result.suggestedThresholdsTxt = options.outputDir / "thresholds_suggested.txt";
+  result.skippedThresholdsTxt = options.outputDir / "thresholds_skipped.txt";
 
 #if MAPMT_ENABLE_ROOT
   const bool writeRoot = options.writeRoot;
@@ -207,8 +238,13 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   std::ofstream channelCsv(result.channelStatsCsv);
   std::ofstream chipTxt(result.chipPedestalsTxt);
   std::ofstream thresholdsTxt(result.suggestedThresholdsTxt);
+  std::ofstream skippedTxt(result.skippedThresholdsTxt);
   std::ofstream noisyTxt(options.outputDir / "noisy_channels.txt");
   std::ofstream deadTxt(options.outputDir / "dead_channels.txt");
+  if (!channelCsv || !chipTxt || !thresholdsTxt || !skippedTxt || !noisyTxt || !deadTxt) {
+    throw std::runtime_error("cannot open one or more pedestal output files in " +
+                             options.outputDir.string());
+  }
 
   channelCsv << "slot,fiber,asic,maroc,pixel,module,pmt,tile,npoints,pedestal_mean_dac,"
                 "pedestal_rms_dac,max_rate_cps,flat_rate_mean_cps,flat_rate_rms_cps,"
@@ -238,6 +274,7 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   if (writeRoot) {
     rootFile = std::make_unique<TFile>(result.rootFile.string().c_str(), "RECREATE");
     statsTree = std::make_unique<TTree>("channel_stats", "MAPMT scaler pedestal calibration");
+    statsTree->SetDirectory(nullptr);
     statsTree->Branch("slot", &outSlot);
     statsTree->Branch("fiber", &outFiber);
     statsTree->Branch("asic", &outAsic);
@@ -338,7 +375,10 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
                << stats.pixel << "  " << stats.pedestalMean << ' ' << stats.pedestalRms << '\n';
     }
 
-    if (stats.nPoints > 0) {
+    const bool validPedestal = stats.nPoints > 0 && stats.maxRate > 0.0 &&
+                               stats.pedestalMean >= config.pedestalMeanMin &&
+                               stats.pedestalMean <= config.pedestalMeanMax;
+    if (validPedestal) {
       const AsicId asicId{address.slot, address.fiber, address.asic};
       auto& chip = chips[asicId];
       chip.id = asicId;
@@ -382,8 +422,19 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
 #endif
   }
 
-  for (const auto& [id, chip] : chips) {
-    if (chip.n <= 0) continue;
+  skippedTxt << "slot fiber asic module pmt valid_channels min_valid_channels reason\n";
+  for (const AsicId& id : activeAsics) {
+    const auto info = hardware_.infoForAsic(id);
+    if (!info) continue;
+    const auto found = chips.find(id);
+    const int nValid = found == chips.end() ? 0 : found->second.n;
+    if (found == chips.end() || nValid < config.minPedestalChannelsPerAsic) {
+      skippedTxt << id.slot << ' ' << id.fiber << ' ' << id.asic << ' ' << info->module << ' '
+                 << info->pmt << ' ' << nValid << ' ' << config.minPedestalChannelsPerAsic
+                 << " insufficient_valid_pedestal_channels\n";
+      continue;
+    }
+    const auto& chip = found->second;
     const double mean = chip.sumMean / static_cast<double>(chip.n);
     const double rms = std::sqrt(chip.sumRms2 / static_cast<double>(chip.n));
     const int suggestedThreshold = static_cast<int>(std::ceil(mean)) + thresholdOffset;
@@ -407,7 +458,10 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
 
 void ScalerPedestalAnalyzer::writeThresholdsFromChipPedestals(
     const std::filesystem::path& chipPedestals, const std::filesystem::path& output,
-    int thresholdOffset) {
+    const DetectorConfig& config, int thresholdOffset) {
+  if (!(config.pedestalMeanMax >= config.pedestalMeanMin)) {
+    throw std::runtime_error("invalid pedestal mean acceptance range");
+  }
   std::ifstream input(chipPedestals);
   if (!input) throw std::runtime_error("cannot open chip pedestal file: " + chipPedestals.string());
   std::ofstream out(output);
@@ -420,10 +474,24 @@ void ScalerPedestalAnalyzer::writeThresholdsFromChipPedestals(
   int pmt = 0;
   double mean = 0.0;
   double rms = 0.0;
+  int written = 0;
+  int skipped = 0;
   while (input >> slot >> fiber >> asic >> module >> pmt >> mean >> rms) {
+    if (mean < config.pedestalMeanMin || mean > config.pedestalMeanMax) {
+      ++skipped;
+      continue;
+    }
     const int threshold = static_cast<int>(std::ceil(mean)) + thresholdOffset;
     out << slot << ' ' << std::setw(2) << fiber << ' ' << asic << ' ' << std::setw(4)
         << threshold << '\n';
+    ++written;
+  }
+  if (written == 0) {
+    throw std::runtime_error("no valid chip pedestal entries found in " + chipPedestals.string());
+  }
+  if (skipped > 0) {
+    std::cerr << "warning: skipped " << skipped
+              << " chip pedestal entries outside the configured pedestal range\n";
   }
 }
 

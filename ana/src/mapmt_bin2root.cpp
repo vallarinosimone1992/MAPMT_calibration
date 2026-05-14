@@ -215,6 +215,9 @@ Options parseOptions(const Args& args) {
   if (!args.get("--clock-hz").empty()) {
     options.clockHz = std::stod(args.get("--clock-hz"));
   }
+  if (options.clockHz <= 0.0) throw std::runtime_error("clock frequency must be positive");
+  if (options.detector.nPixels <= 0) throw std::runtime_error("n_pixels must be positive");
+  if (options.detector.nAsics <= 0) throw std::runtime_error("n_asics must be positive");
   if (!args.get("--max-events").empty()) {
     options.maxEvents = static_cast<std::uint64_t>(std::stoull(args.get("--max-events")));
   }

@@ -104,6 +104,7 @@ Main outputs:
 - `channel_stats.csv`: per-channel statistics.
 - `chip_pedestals.txt`: ASIC/PMT pedestal summary compatible with the legacy `thrCalc.c` input.
 - `thresholds_suggested.txt`: thresholds computed as `ceil(ASIC_pedestal_mean) + offset`.
+- `thresholds_skipped.txt`: active ASICs that were not assigned a suggested threshold because too few channels had a physical pedestal.
 - `noisy_channels.txt` and `dead_channels.txt`.
 - `histo.root`: ROOT `rate vs threshold` histograms and a summary TTree.
 

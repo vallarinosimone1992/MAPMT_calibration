@@ -28,6 +28,7 @@ struct DetectorConfig {
 
   double pedestalMeanMin = 150.0;
   double pedestalMeanMax = 220.0;
+  int minPedestalChannelsPerAsic = 1;
   double noisyPedestalRms = 4.0;
   double hotRateCps = 10000.0;
 

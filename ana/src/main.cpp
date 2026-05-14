@@ -178,6 +178,7 @@ int runPedestal(const Args& args) {
   std::cout << "channel_stats=" << result.channelStatsCsv << '\n';
   std::cout << "chip_pedestals=" << result.chipPedestalsTxt << '\n';
   std::cout << "suggested_thresholds=" << result.suggestedThresholdsTxt << '\n';
+  std::cout << "skipped_thresholds=" << result.skippedThresholdsTxt << '\n';
   if (!result.rootFile.empty()) std::cout << "root=" << result.rootFile << '\n';
   return EXIT_SUCCESS;
 }
@@ -185,8 +186,11 @@ int runPedestal(const Args& args) {
 int runThresholds(const Args& args) {
   const auto chipPedestals = requiredPath(args, "--chip-pedestals");
   const auto output = requiredPath(args, "--output");
-  const int offset = std::stoi(args.get("--offset", args.get("--threshold-offset", "25")));
-  mapmt::ScalerPedestalAnalyzer::writeThresholdsFromChipPedestals(chipPedestals, output, offset);
+  const auto config = readConfig(args);
+  const int offset =
+      args.get("--offset").empty() ? config.thresholdOffset : std::stoi(args.get("--offset"));
+  mapmt::ScalerPedestalAnalyzer::writeThresholdsFromChipPedestals(chipPedestals, output, config,
+                                                                  offset);
   std::cout << "thresholds=" << output << '\n';
   return EXIT_SUCCESS;
 }

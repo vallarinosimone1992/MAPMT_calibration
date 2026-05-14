@@ -1,0 +1,194 @@
+Opening CRCSR Window (opened at [0xb6bd4000,0xb7bd4000])
+Opening A32 Window (opened at [0xb6bc4000,0xb6bd4000])
+Opening A32Blt Window (opened at [0xacbc4000,0xb6bc4000])
+Opening A24 Window (opened at [0xabbc4000,0xacbc4000])
+Opening A16 Window (opened at [0xabbb4000,0xabbc4000])
+jlabgefMapTsi: Tempe Chip Userspace map successful
+VME Bus Error IRQ Disabled
+vmeBusCreateLockShm: vmeBus shared memory mutex initialized
+
+sspInit: noFirmwareCheck
+sspInit: noBoardInit
+laddr_inc=0xbfca22a8abcc4000 (list)
+laddr=0xabcc4000abbc4000 laddr_inc=0xb7fdd038
+&(ssp->Cfg.BoardId)=0xabcc4000abcc4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x100000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x100000 (0xabcc4000)
+laddr_inc=0x100000abd44000 (list)
+laddr=0xabd44000abbc4000 laddr_inc=0xabcc4000
+&(ssp->Cfg.BoardId)=0xabd44000abd44000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x180000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x180000 (0xabd44000)
+laddr_inc=0x180000abdc4000 (list)
+laddr=0xabdc4000abbc4000 laddr_inc=0xabd44000
+&(ssp->Cfg.BoardId)=0xabdc4000abdc4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x200000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x200000 (0xabdc4000)
+laddr_inc=0x200000abe44000 (list)
+laddr=0xabe44000abbc4000 laddr_inc=0xabdc4000
+&(ssp->Cfg.BoardId)=0xabe44000abe44000
+  Slot  5: Type 5 	Firmware (major.minor): 1.1
+   WARN: Firmware version (0x101) not supported by this driver.
+          Supported version = 0x103 (IGNORED)
+Initialized SSP  0  Slot #  5 at VME (Local) address 0x00280000 (0xabe44000)
+laddr_inc=0xbfca22acabec4000 (list)
+laddr=0xabec4000abbc4000 laddr_inc=0xabdc4000
+&(ssp->Cfg.BoardId)=0xabec4000abec4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x300000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x300000 (0xabec4000)
+laddr_inc=0x300000abf44000 (list)
+laddr=0xabf44000abbc4000 laddr_inc=0xabec4000
+&(ssp->Cfg.BoardId)=0xabf44000abf44000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x380000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x380000 (0xabf44000)
+laddr_inc=0x380000abfc4000 (list)
+laddr=0xabfc4000abbc4000 laddr_inc=0xabf44000
+&(ssp->Cfg.BoardId)=0xabfc4000abfc4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x400000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x400000 (0xabfc4000)
+laddr_inc=0x400000ac044000 (list)
+laddr=0xac044000abbc4000 laddr_inc=0xabfc4000
+&(ssp->Cfg.BoardId)=0xac044000ac044000
+laddr_inc=0xbfca22acac0c4000 (list)
+laddr=0xac0c4000abbc4000 laddr_inc=0xabfc4000
+&(ssp->Cfg.BoardId)=0xac0c4000ac0c4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x500000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x500000 (0xac0c4000)
+laddr_inc=0x500000ac244000 (list)
+laddr=0xac244000abbc4000 laddr_inc=0xac0c4000
+&(ssp->Cfg.BoardId)=0xac244000ac244000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x680000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x680000 (0xac244000)
+laddr_inc=0x680000ac2c4000 (list)
+laddr=0xac2c4000abbc4000 laddr_inc=0xac244000
+&(ssp->Cfg.BoardId)=0xac2c4000ac2c4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x700000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x700000 (0xac2c4000)
+laddr_inc=0x700000ac344000 (list)
+laddr=0xac344000abbc4000 laddr_inc=0xac2c4000
+&(ssp->Cfg.BoardId)=0xac344000ac344000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x780000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x780000 (0xac344000)
+laddr_inc=0x780000ac3c4000 (list)
+laddr=0xac3c4000abbc4000 laddr_inc=0xac344000
+&(ssp->Cfg.BoardId)=0xac3c4000ac3c4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x800000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x800000 (0xac3c4000)
+laddr_inc=0x800000ac444000 (list)
+laddr=0xac444000abbc4000 laddr_inc=0xac3c4000
+&(ssp->Cfg.BoardId)=0xac444000ac444000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x880000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x880000 (0xac444000)
+laddr_inc=0x880000ac4c4000 (list)
+laddr=0xac4c4000abbc4000 laddr_inc=0xac444000
+&(ssp->Cfg.BoardId)=0xac4c4000ac4c4000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x900000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x900000 (0xac4c4000)
+laddr_inc=0x900000ac544000 (list)
+laddr=0xac544000abbc4000 laddr_inc=0xac4c4000
+&(ssp->Cfg.BoardId)=0xac544000ac544000
+jlabgefMemProbe: Clearing VME BERR/2eST (0x800cf900) at VME address 0x980000
+sspInit: ERROR: No addressable board at VME (Local) addr=0x980000 (0xac544000)
+sspInit: a32addr=0x08800000, write to AD32 register 0x00000881
+sspInit: laddr(am=0x09) = 0xad3c4000, sspA32Offset=0xa4bc4000
+SSP  0  Slot #  5 at address 0x00280000 (0xabe44000) assigned A32 address 0x08800000 (0xad3c4000)
+sspInit: found 1 SSPs
+SSP [0] geo 0x0, slot 5, id 0'
+sspGetClkStatus: PLL locked
+sspSetClkSrc:  Clock source successfully set to: 2 [P2]
+
+                            SSP Port Status Summary
+
+                Channel  Trig Latency(ns)   Bit errors   
+Sl- P    Status   RX      TX                             
+---------------------------------------------------------
+ 5- 1 DOWN          0       0       0   
+ 5- 2 DOWN          0       0       0   
+ 5- 3 DOWN          0       0       0   
+ 5- 4 DOWN          0       0       0   
+ 5- 5 DOWN          0       0       0   
+ 5- 6 DOWN          0       0       0   
+ 5- 7 DOWN          0       0       0   
+ 5- 8 DOWN          0       0       0   
+ 5- 9 DOWN          0       0       0   
+ 5-10 DOWN          0       0       0   
+--------------------------------------------------------------------------------
+
+
+sspRich_ScanFibers: Slot 5, connected fibers: 0x00000F00
+SSP RICH Fiber Status (slot=5):
+------------------------------------------------------------------------
+     Fiber  Rst    ChUp   HrdErr FrmErr ErrCnt EvtEn  Valid #ASIC FWRev 
+------------------------------------------------------------------------
+     0      0      0      0      0      0      0      0      0 00000000
+     1      0      0      0      0      0      0      0      0 00000000
+     2      0      0      0      0      0      0      0      0 00000000
+     3      0      0      0      0      0      0      0      0 00000000
+     4      0      0      0      0      0      0      0      0 00000000
+     5      0      0      0      0      0      0      0      0 00000000
+     6      0      0      0      0      0      0      0      0 00000000
+     7      0      0      0      0      0      0      0      0 00000000
+     8      0      1      0      0      0      1      1      2 000B0002
+     9      0      1      0      0      0      1      1      2 000B0002
+    10      0      1      0      0      0      1      1      2 000B0002
+    11      0      1      0      0      0      1      1      2 000B0002
+    12      0      0      0      0      0      0      0      0 00000000
+    13      0      0      0      0      0      0      0      0 00000000
+    14      0      0      0      0      0      0      0      0 00000000
+    15      0      0      0      0      0      0      0      0 00000000
+    16      0      0      0      0      0      0      0      0 00000000
+    17      0      0      0      0      0      0      0      0 00000000
+    18      0      0      0      0      0      0      0      0 00000000
+    19      0      0      0      0      0      0      0      0 00000000
+    20      0      0      0      0      0      0      0      0 00000000
+    21      0      0      0      0      0      0      0      0 00000000
+    22      0      0      0      0      0      0      0      0 00000000
+    23      0      0      0      0      0      0      0      0 00000000
+    24      0      0      0      0      0      0      0      0 00000000
+    25      0      0      0      0      0      0      0      0 00000000
+    26      0      0      0      0      0      0      0      0 00000000
+    27      0      0      0      0      0      0      0      0 00000000
+    28      0      0      0      0      0      0      0      0 00000000
+    29      0      0      0      0      0      0      0      0 00000000
+    30      0      0      0      0      0      0      0      0 00000000
+    31      0      0      0      0      0      0      0      0 00000000
+SLOT[5] sspRich_GetConnectedFibers  fibers = 0x00000F00
+Total fibers 1 
+Total marocs 4 
+sspRich_SaveConfig
+Configuring MAROC boards Gain file /home/clasrun/dRICH/MAPMT_calibration/maps/gain.txt not found...
+================
+SLOT 5 FIBER  8
+================
+slot 5 fiber 8 asic 0 threshold 230 gain mean 64.000
+slot 5 fiber 8 asic 1 threshold 230 gain mean 64.000
+slot 5 fiber 8 asic 2 threshold 230 gain mean 64.000
+WRITE
+READ
+================
+SLOT 5 FIBER  9
+================
+slot 5 fiber 9 asic 0 threshold 230 gain mean 64.000
+slot 5 fiber 9 asic 1 threshold 230 gain mean 64.000
+slot 5 fiber 9 asic 2 threshold 230 gain mean 64.000
+WRITE
+READ
+================
+SLOT 5 FIBER 10
+================
+slot 5 fiber 10 asic 0 threshold 230 gain mean 64.000
+slot 5 fiber 10 asic 1 threshold 230 gain mean 64.000
+slot 5 fiber 10 asic 2 threshold 230 gain mean 64.000
+WRITE
+READ
+================
+SLOT 5 FIBER 11
+================
+slot 5 fiber 11 asic 0 threshold 230 gain mean 64.000
+slot 5 fiber 11 asic 1 threshold 230 gain mean 64.000
+slot 5 fiber 11 asic 2 threshold 230 gain mean 64.000
+WRITE
+READ
+====================
+Total Tiles connected 4 
+====================

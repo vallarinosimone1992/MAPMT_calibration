@@ -47,6 +47,23 @@ which bash
 /usr/bin/env bash --version
 ```
 
+The legacy `ssptest_*` executables may still read maps from
+`$RICH_SUITE/maps`. The provided `setup_daq.csh.example` creates the
+compatibility symlink:
+
+```text
+$MAPMT_SUITE/maps -> $MAPMT_SUITE/cnf/maps
+```
+
+If the DAQ executable reports `Gain file .../maps/gain.txt not found`, create
+that link manually:
+
+```csh
+cd $MAPMT_SUITE
+ln -s cnf/maps maps
+ls -l maps/gain.txt
+```
+
 ## Main Parameters In `daq.env`
 
 - `MAPMT_SUITE`: suite root, the modern replacement for `RICH_SUITE`.
@@ -65,6 +82,46 @@ which bash
 
 `gain=0` preserves the legacy behavior: use the gain map loaded by the
 configuration.
+
+## Installing Suggested Thresholds In suite2.0 DAQ
+
+`mapmt_calibrate pedestal` writes `thresholds_suggested.txt` in the same text
+format used by `suite2.0/maps/threshold.txt`:
+
+```text
+slot fiber asic threshold_dac
+```
+
+To use those thresholds with the legacy `suite2.0` standalone DAQ, copy the
+file into the active map directory, then configure with threshold `0`.
+According to the `suite2.0` documentation, `ssptest_ConfigureAll` uses:
+
+```text
+ssptest_ConfigureAll [threshold, use 0 for map] [gain, use 0 for map] [ctest amplitude]
+```
+
+From a `csh`/`tcsh` DAQ account:
+
+```csh
+setenv RICH_SUITE /home/clasrun/rich/suite2.0
+set stamp = `date +%Y%m%d_%H%M%S`
+
+cp $RICH_SUITE/maps/threshold.txt $RICH_SUITE/maps/threshold.txt.$stamp.bak
+cp /path/to/thresholds_suggested.txt $RICH_SUITE/maps/threshold.txt
+
+awk 'NF!=4 || $4<0 || $4>1023 {print; bad=1} END{exit bad}' \
+  $RICH_SUITE/maps/threshold.txt
+
+cd $RICH_SUITE/sw/daq
+ssptest_ConfigureAll 0 0 0
+```
+
+Use `ssptest_ConfigureAll 0 64 0` instead if the threshold map should be used
+with a uniform MAROC gain of `64`. Passing a nonzero first argument such as
+`230` ignores the threshold map and programs that same threshold everywhere.
+
+Changing `maps/threshold.txt` is not enough by itself: the MAROC boards are
+updated only when `ssptest_ConfigureAll` is run again.
 
 ## Relationship With Offline Calibration Files
 

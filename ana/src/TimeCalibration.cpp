@@ -19,6 +19,7 @@
 #include <iostream>
 #include <limits>
 #include <map>
+#include <memory>
 #include <numeric>
 #include <optional>
 #include <sstream>
@@ -50,6 +51,22 @@ double rmsOf(const std::vector<double>& values, double mean) {
   double sum = 0.0;
   for (double value : values) sum += (value - mean) * (value - mean);
   return std::sqrt(sum / static_cast<double>(values.size()));
+}
+
+bool isIntegerValued(double value) {
+  return std::isfinite(value) && std::floor(value) == value;
+}
+
+int checkedInt(double value, const std::string& field, int lineNumber) {
+  if (!isIntegerValued(value)) {
+    throw std::runtime_error(field + " must be an integer at line " + std::to_string(lineNumber));
+  }
+  if (value < static_cast<double>(std::numeric_limits<int>::min()) ||
+      value > static_cast<double>(std::numeric_limits<int>::max())) {
+    throw std::runtime_error(field + " is out of integer range at line " +
+                             std::to_string(lineNumber));
+  }
+  return static_cast<int>(value);
 }
 
 #if MAPMT_ENABLE_ROOT
@@ -326,6 +343,8 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   if (options.nullCalibration) return makeNullCalibrationResult(hardware_, options);
 
   if (options.input.empty()) throw std::runtime_error("missing time input file");
+  if (options.minEntries <= 0) throw std::runtime_error("min_entries must be positive");
+  if (options.bins <= 0) throw std::runtime_error("time histogram bins must be positive");
   std::filesystem::create_directories(options.outputDir);
 
   std::ifstream input(options.input);
@@ -356,24 +375,40 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
       if (values.size() < 2) {
         throw std::runtime_error("absolute-channel time row needs at least 2 columns");
       }
-      address = hardware_.decodeAbsoluteChannel(static_cast<int>(values[0]));
+      const int absoluteChannel = checkedInt(values[0], "absolute channel", lineNumber);
+      if (absoluteChannel < 0) {
+        throw std::runtime_error("absolute channel must be non-negative at line " +
+                                 std::to_string(lineNumber));
+      }
+      address = hardware_.decodeAbsoluteChannel(absoluteChannel);
       time = values[1];
     } else if (format == TimeInputFormat::Address) {
       if (values.size() < 5) {
         throw std::runtime_error("address time row needs slot fiber asic channel time");
       }
-      address = Address{static_cast<int>(values[0]), static_cast<int>(values[1]),
-                        static_cast<int>(values[2]), static_cast<int>(values[3])};
+      address = Address{checkedInt(values[0], "slot", lineNumber),
+                        checkedInt(values[1], "fiber", lineNumber),
+                        checkedInt(values[2], "asic", lineNumber),
+                        checkedInt(values[3], "maroc", lineNumber)};
       time = values[4];
     } else if (format == TimeInputFormat::EventAddress) {
       if (values.size() < 6) {
         throw std::runtime_error("event-address time row needs event slot fiber asic channel time");
       }
-      address = Address{static_cast<int>(values[1]), static_cast<int>(values[2]),
-                        static_cast<int>(values[3]), static_cast<int>(values[4])};
+      (void)checkedInt(values[0], "event", lineNumber);
+      address = Address{checkedInt(values[1], "slot", lineNumber),
+                        checkedInt(values[2], "fiber", lineNumber),
+                        checkedInt(values[3], "asic", lineNumber),
+                        checkedInt(values[4], "maroc", lineNumber)};
       time = values[5];
     }
 
+    if (!std::isfinite(time)) {
+      throw std::runtime_error("time must be finite at line " + std::to_string(lineNumber));
+    }
+    if (address.channel < 0 || address.channel >= hardware_.config().nPixels) {
+      throw std::runtime_error("MAROC channel out of range at line " + std::to_string(lineNumber));
+    }
     if (!hardware_.isActive(AsicId{address.slot, address.fiber, address.asic})) continue;
     times[address].push_back(time);
     globalMin = std::min(globalMin, time);
@@ -389,9 +424,14 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   const double timeMax = options.maxTime.value_or(globalMax);
   if (!(timeMax > timeMin)) throw std::runtime_error("invalid time histogram range");
 
+  std::map<Address, std::vector<double>> selectedTimes;
   std::map<Address, double> means;
   for (const auto& [address, values] : times) {
-    if (static_cast<int>(values.size()) >= options.minEntries) means[address] = meanOf(values);
+    auto& selected = selectedTimes[address];
+    for (double value : values) {
+      if (value >= timeMin && value <= timeMax) selected.push_back(value);
+    }
+    if (static_cast<int>(selected.size()) >= options.minEntries) means[address] = meanOf(selected);
   }
   if (means.empty()) {
     if (options.allowEmptyInput) return makeNullCalibrationResult(hardware_, options);
@@ -424,11 +464,12 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   if (writeRoot) result.rootFile = options.outputDir / "time_calibration.root";
 
   std::ofstream csv(result.offsetsCsv);
+  if (!csv) throw std::runtime_error("cannot write time offsets CSV: " + result.offsetsCsv.string());
   csv << "slot,fiber,asic,maroc,pixel,module,pmt,tile,entries,mean_time,sigma_time,offset\n";
 
 #if MAPMT_ENABLE_ROOT
-  TFile root(result.rootFile.string().c_str(), "RECREATE");
-  TTree tree("time_offsets", "MAPMT time calibration offsets");
+  std::unique_ptr<TFile> root;
+  std::unique_ptr<TTree> tree;
   int outSlot = 0;
   int outFiber = 0;
   int outAsic = 0;
@@ -441,21 +482,26 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   double outMean = 0.0;
   double outSigma = 0.0;
   double outOffset = 0.0;
-  tree.Branch("slot", &outSlot);
-  tree.Branch("fiber", &outFiber);
-  tree.Branch("asic", &outAsic);
-  tree.Branch("maroc", &outMaroc);
-  tree.Branch("pixel", &outPixel);
-  tree.Branch("module", &outModule);
-  tree.Branch("pmt", &outPmt);
-  tree.Branch("tile", &outTile);
-  tree.Branch("entries", &outEntries);
-  tree.Branch("mean", &outMean);
-  tree.Branch("sigma", &outSigma);
-  tree.Branch("offset", &outOffset);
+  if (writeRoot) {
+    root = std::make_unique<TFile>(result.rootFile.string().c_str(), "RECREATE");
+    tree = std::make_unique<TTree>("time_offsets", "MAPMT time calibration offsets");
+    tree->SetDirectory(nullptr);
+    tree->Branch("slot", &outSlot);
+    tree->Branch("fiber", &outFiber);
+    tree->Branch("asic", &outAsic);
+    tree->Branch("maroc", &outMaroc);
+    tree->Branch("pixel", &outPixel);
+    tree->Branch("module", &outModule);
+    tree->Branch("pmt", &outPmt);
+    tree->Branch("tile", &outTile);
+    tree->Branch("entries", &outEntries);
+    tree->Branch("mean", &outMean);
+    tree->Branch("sigma", &outSigma);
+    tree->Branch("offset", &outOffset);
+  }
 #endif
 
-  for (const auto& [address, values] : times) {
+  for (const auto& [address, values] : selectedTimes) {
     if (static_cast<int>(values.size()) < options.minEntries) continue;
     const auto info = hardware_.infoForAddress(address);
     if (!info) continue;
@@ -465,16 +511,18 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
     const double offset = referenceMean - mean;
 
 #if MAPMT_ENABLE_ROOT
-    TH1D hist(timeHistName(address).c_str(), "", options.bins, timeMin, timeMax);
-    hist.GetXaxis()->SetTitle("TDC time");
-    hist.GetYaxis()->SetTitle("Entries");
-    for (double value : values) hist.Fill(value);
-    char title[256];
-    std::snprintf(title, sizeof(title), "M%d PMT%d pixel %d slot %d fiber %d asic %d ch %d",
-                  info->module, info->pmt, hardware_.pixelFromMaroc(address.channel),
-                  address.slot, address.fiber, address.asic, address.channel);
-    hist.SetTitle(title);
-    hist.Write();
+    if (writeRoot) {
+      TH1D hist(timeHistName(address).c_str(), "", options.bins, timeMin, timeMax);
+      hist.GetXaxis()->SetTitle("TDC time");
+      hist.GetYaxis()->SetTitle("Entries");
+      for (double value : values) hist.Fill(value);
+      char title[256];
+      std::snprintf(title, sizeof(title), "M%d PMT%d pixel %d slot %d fiber %d asic %d ch %d",
+                    info->module, info->pmt, hardware_.pixelFromMaroc(address.channel),
+                    address.slot, address.fiber, address.asic, address.channel);
+      hist.SetTitle(title);
+      hist.Write();
+    }
 #endif
 
     TimeChannelStats stats;
@@ -495,25 +543,29 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
         << '\n';
 
 #if MAPMT_ENABLE_ROOT
-    outSlot = address.slot;
-    outFiber = address.fiber;
-    outAsic = address.asic;
-    outMaroc = address.channel;
-    outPixel = stats.pixel;
-    outModule = stats.module;
-    outPmt = stats.pmt;
-    outTile = stats.tile;
-    outEntries = stats.entries;
-    outMean = stats.mean;
-    outSigma = stats.sigma;
-    outOffset = stats.offset;
-    tree.Fill();
+    if (writeRoot && tree) {
+      outSlot = address.slot;
+      outFiber = address.fiber;
+      outAsic = address.asic;
+      outMaroc = address.channel;
+      outPixel = stats.pixel;
+      outModule = stats.module;
+      outPmt = stats.pmt;
+      outTile = stats.tile;
+      outEntries = stats.entries;
+      outMean = stats.mean;
+      outSigma = stats.sigma;
+      outOffset = stats.offset;
+      tree->Fill();
+    }
 #endif
   }
 
 #if MAPMT_ENABLE_ROOT
-  tree.Write();
-  root.Close();
+  if (writeRoot && root && tree) {
+    tree->Write();
+    root->Close();
+  }
 #endif
 
   if (options.writeJson) {

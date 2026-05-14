@@ -39,6 +39,7 @@ struct PedestalResult {
   std::filesystem::path channelStatsCsv;
   std::filesystem::path chipPedestalsTxt;
   std::filesystem::path suggestedThresholdsTxt;
+  std::filesystem::path skippedThresholdsTxt;
 };
 
 class ScalerPedestalAnalyzer {
@@ -48,6 +49,7 @@ class ScalerPedestalAnalyzer {
   PedestalResult run(const PedestalOptions& options) const;
   static void writeThresholdsFromChipPedestals(const std::filesystem::path& chipPedestals,
                                                const std::filesystem::path& output,
+                                               const DetectorConfig& config,
                                                int thresholdOffset);
 
  private:

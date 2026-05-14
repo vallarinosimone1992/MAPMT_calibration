@@ -13,6 +13,12 @@ setenv RICH_SUITE "$MAPMT_SUITE"
 # Optional: point the bash DAQ wrappers to their configuration file.
 setenv MAPMT_DAQ_CONFIG "$MAPMT_SUITE/daq/daq.env"
 
+# The legacy DAQ executables still look for maps under $RICH_SUITE/maps.
+# In this standalone package the canonical copy is under cnf/maps.
+if (! -e "$MAPMT_SUITE/maps") then
+  ln -s "$MAPMT_SUITE/cnf/maps" "$MAPMT_SUITE/maps"
+endif
+
 # Optional: if the ssptest_* commands are not already in PATH, uncomment and
 # adapt this path. Keep daq.env in sync with the same directory.
 # setenv MAPMT_DAQ_EXEDIR "$CODA/src/rol/Linux_i686_vme/bin"

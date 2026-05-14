@@ -38,6 +38,7 @@ void setInt(const std::string& key, const std::string& value, DetectorConfig& co
   else if (key == "flat_rate_min") config.flatRateMin = parsed;
   else if (key == "flat_rate_max") config.flatRateMax = parsed;
   else if (key == "shoulder_range") config.shoulderRange = parsed;
+  else if (key == "min_pedestal_channels_per_asic") config.minPedestalChannelsPerAsic = parsed;
   else throw std::runtime_error("unknown integer config key: " + key);
 }
 

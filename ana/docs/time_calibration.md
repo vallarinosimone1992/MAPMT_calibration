@@ -49,10 +49,12 @@ Main options:
 - `--reference slot:fiber:asic:maroc`: channel used as the time zero.
 - `--min-entries N`: minimum number of hits required to calibrate a channel, default `20`.
 - `--bins N`: number of time-histogram bins, default `400`.
-- `--min-time T` and `--max-time T`: manual histogram range.
+- `--min-time T` and `--max-time T`: manual time range used for both the mean
+  estimator and the ROOT histograms.
 - `--json-output FILE`: override the default JSON output path.
 - `--legacy-mapmt-output FILE`: also write a legacy `MAPMT_time_calibration.dat`-style file.
 - `--no-json`: disable JSON output.
+- `--no-root`: skip `time_calibration.root`.
 - `--null-calibration`: write a zero/no-op calibration without TDC input.
 - `--allow-empty`: fall back to a zero/no-op calibration if the input has no usable hits.
 
@@ -68,6 +70,8 @@ time_offsets.csv
 time_calibration.root
 mapmt_time_calibration.json
 ```
+
+With `--no-root`, `time_calibration.root` is not created.
 
 `time_offsets.csv` contains one row per channel:
 
