@@ -6,7 +6,5 @@ CXX_DEFINES = -DROOT_SUPPORT_CLAD
 
 CXX_INCLUDES = -I/Users/simone/Work/BNL/EIC/ePIC/dRICH/TestBeam/various/MAPMTs/MAPMT_calibration/ana/include -isystem /opt/homebrew/opt/root/include/root
 
-CXX_FLAGSarm64 = -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic
-
-CXX_FLAGS = -std=c++17 -arch arm64 -Wall -Wextra -Wpedantic
+CXX_FLAGS = -std=c++17 -Wall -Wextra -Wpedantic
 

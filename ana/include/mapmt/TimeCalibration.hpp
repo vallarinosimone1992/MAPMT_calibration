@@ -25,6 +25,19 @@ struct TimeOptions {
   int bins = 400;
   std::optional<double> minTime;
   std::optional<double> maxTime;
+  bool nullCalibration = false;
+  bool allowEmptyInput = false;
+  bool writeJson = true;
+  std::filesystem::path jsonOutput;
+  std::filesystem::path legacyMapmtOutput;
+  std::string createdBy = "mapmt_calibrate time";
+  std::optional<std::string> createdAt;
+  std::filesystem::path configPath;
+  std::filesystem::path setupPath;
+  std::filesystem::path fiberMapPath;
+  std::filesystem::path thresholdsPath;
+  std::filesystem::path gainsPath;
+  double legacyTargetTime = 390.0;
 };
 
 struct TimeChannelStats {
@@ -43,6 +56,8 @@ struct TimeResult {
   std::vector<TimeChannelStats> channels;
   std::filesystem::path rootFile;
   std::filesystem::path offsetsCsv;
+  std::filesystem::path jsonFile;
+  std::filesystem::path legacyMapmtFile;
 };
 
 class TimeCalibration {

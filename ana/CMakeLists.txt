@@ -40,4 +40,11 @@ target_compile_options(mapmt_calibrate
     $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall -Wextra -Wpedantic>
 )
 
-install(TARGETS mapmt_calibrate RUNTIME DESTINATION bin)
+add_executable(mapmt_bin2root src/mapmt_bin2root.cpp)
+target_link_libraries(mapmt_bin2root PRIVATE mapmt_calibration_lib)
+target_compile_options(mapmt_bin2root
+  PRIVATE
+    $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall -Wextra -Wpedantic>
+)
+
+install(TARGETS mapmt_calibrate mapmt_bin2root RUNTIME DESTINATION bin)

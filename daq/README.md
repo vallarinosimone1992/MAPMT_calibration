@@ -36,7 +36,7 @@ vi daq.env
 - `MAPMT_SCALER_DURATION`: counting duration in seconds for each threshold point; legacy value was `2`.
 - `MAPMT_DEFAULT_THRESHOLD`: threshold used by configuration and rate scans; legacy value was `230`.
 - `MAPMT_DEFAULT_GAIN`: default uniform gain; legacy value was `64`.
-- `MAPMT_PEDESTAL_START`, `MAPMT_PEDESTAL_STOP`, `MAPMT_PEDESTAL_GAIN`: pedestal scan settings.
+- `MAPMT_PEDESTAL_START`, `MAPMT_PEDESTAL_STOP`, `MAPMT_PEDESTAL_GAIN`: pedestal scan settings. The suite2.0 dRICH pedestal script used `160..220` with gain `64`.
 - `MAPMT_DARK_START`, `MAPMT_DARK_STOP`, `MAPMT_DARK_GAIN`: dark-rate scan settings.
 - `MAPMT_RATE_RUNS`, `MAPMT_RATE_FIXED_THRESHOLD`, `MAPMT_RATE_GAIN`: fixed-threshold rate scan settings.
 - `MAPMT_TDC_*`: parameters for `ssptest_TDCAll`.
@@ -65,5 +65,22 @@ Scaler files in `data/ped` can be analyzed with:
   --output "$MAPMT_SUITE/results/pedestal_YYYYMMDD_HHMMSS"
 ```
 
-The binary TDC file is the correct DAQ output. Decoding remains in the existing
-external chain; the offline `time` command uses the already-decoded TDC file.
+If the run-specific `rich_setup_YYYYMMDD_HHMMSS.txt` differs from
+`cnf/maps/setup.txt`, pass it explicitly:
+
+```bash
+"$MAPMT_SUITE/ana/build/mapmt_calibrate" pedestal \
+  --input "$MAPMT_SUITE/data/ped/rich_pedestal_YYYYMMDD_HHMMSS.txt" \
+  --setup "$MAPMT_SUITE/data/ped/rich_setup_YYYYMMDD_HHMMSS.txt" \
+  --output "$MAPMT_SUITE/results/pedestal_YYYYMMDD_HHMMSS"
+```
+
+The binary TDC file is the correct DAQ output. The offline `time` command uses
+an already-decoded TDC file; decoding can remain in the existing external chain.
+For local decoding, the analysis build provides:
+
+```bash
+"$MAPMT_SUITE/ana/build/mapmt_bin2root" \
+  --input "$MAPMT_SUITE/data/tdc/ssprich_tdc_*.bin" \
+  --output-dir "$MAPMT_SUITE/results/tdc_decode"
+```

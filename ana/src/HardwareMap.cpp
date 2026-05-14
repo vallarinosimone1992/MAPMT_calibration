@@ -121,20 +121,24 @@ std::optional<ChannelInfo> HardwareMap::infoForAddress(Address address) const {
 }
 
 bool HardwareMap::isActive(AsicId id) const {
-  return channels_.find(id) != channels_.end();
+  if (channels_.find(id) == channels_.end()) return false;
+  if (setupFibers_.empty()) return true;
+  return setupFibers_.find(FiberId{id.slot, id.fiber}) != setupFibers_.end();
 }
 
 std::vector<AsicId> HardwareMap::activeAsics() const {
   std::vector<AsicId> result;
   result.reserve(channels_.size());
-  for (const auto& [id, info] : channels_) result.push_back(id);
+  for (const auto& [id, info] : channels_) {
+    if (isActive(id)) result.push_back(id);
+  }
   return result;
 }
 
 std::vector<Address> HardwareMap::activeChannels() const {
   std::vector<Address> result;
   result.reserve(channels_.size() * static_cast<std::size_t>(config_.nPixels));
-  for (const auto& [id, info] : channels_) {
+  for (const AsicId& id : activeAsics()) {
     for (int channel = 0; channel < config_.nPixels; ++channel) {
       result.push_back(Address{id.slot, id.fiber, id.asic, channel});
     }
@@ -189,7 +193,11 @@ std::string HardwareMap::summary() const {
   std::set<int> pmts;
   std::set<int> tiles;
   std::set<int> slots;
-  for (const auto& [id, info] : channels_) {
+  const auto active = activeAsics();
+  for (const AsicId& id : active) {
+    const auto found = channels_.find(id);
+    if (found == channels_.end()) continue;
+    const auto& info = found->second;
     modules.insert(info.module);
     pmts.insert(info.pmt);
     tiles.insert(info.tile);
@@ -197,8 +205,9 @@ std::string HardwareMap::summary() const {
   }
 
   std::ostringstream out;
-  out << "active_asics=" << channels_.size() << '\n';
-  out << "active_channels=" << channels_.size() * static_cast<std::size_t>(config_.nPixels)
+  out << "mapped_asics=" << channels_.size() << '\n';
+  out << "active_asics=" << active.size() << '\n';
+  out << "active_channels=" << active.size() * static_cast<std::size_t>(config_.nPixels)
       << '\n';
   out << "modules=" << modules.size() << '\n';
   out << "pmts=" << pmts.size() << '\n';

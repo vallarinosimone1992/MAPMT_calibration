@@ -1,0 +1,13 @@
+/ana/build/
+
+/data/*
+!/data/.gitkeep
+!/data/logs/
+!/data/logs/.gitkeep
+!/data/ped/
+!/data/ped/.gitkeep
+!/data/tdc/
+!/data/tdc/.gitkeep
+
+/results/*
+!/results/.gitkeep

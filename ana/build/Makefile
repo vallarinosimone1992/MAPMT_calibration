@@ -187,6 +187,19 @@ mapmt_calibrate/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mapmt_calibrate.dir/build.make CMakeFiles/mapmt_calibrate.dir/build
 .PHONY : mapmt_calibrate/fast
 
+#=============================================================================
+# Target rules for targets named mapmt_bin2root
+
+# Build rule for target.
+mapmt_bin2root: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 mapmt_bin2root
+.PHONY : mapmt_bin2root
+
+# fast build rule for target.
+mapmt_bin2root/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mapmt_bin2root.dir/build.make CMakeFiles/mapmt_bin2root.dir/build
+.PHONY : mapmt_bin2root/fast
+
 src/DetectorConfig.o: src/DetectorConfig.cpp.o
 .PHONY : src/DetectorConfig.o
 
@@ -307,6 +320,30 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/mapmt_calibrate.dir/build.make CMakeFiles/mapmt_calibrate.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/mapmt_bin2root.o: src/mapmt_bin2root.cpp.o
+.PHONY : src/mapmt_bin2root.o
+
+# target to build an object file
+src/mapmt_bin2root.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mapmt_bin2root.dir/build.make CMakeFiles/mapmt_bin2root.dir/src/mapmt_bin2root.cpp.o
+.PHONY : src/mapmt_bin2root.cpp.o
+
+src/mapmt_bin2root.i: src/mapmt_bin2root.cpp.i
+.PHONY : src/mapmt_bin2root.i
+
+# target to preprocess a source file
+src/mapmt_bin2root.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mapmt_bin2root.dir/build.make CMakeFiles/mapmt_bin2root.dir/src/mapmt_bin2root.cpp.i
+.PHONY : src/mapmt_bin2root.cpp.i
+
+src/mapmt_bin2root.s: src/mapmt_bin2root.cpp.s
+.PHONY : src/mapmt_bin2root.s
+
+# target to generate assembly for a file
+src/mapmt_bin2root.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/mapmt_bin2root.dir/build.make CMakeFiles/mapmt_bin2root.dir/src/mapmt_bin2root.cpp.s
+.PHONY : src/mapmt_bin2root.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -319,6 +356,7 @@ help:
 	@echo "... install/strip"
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
+	@echo "... mapmt_bin2root"
 	@echo "... mapmt_calibrate"
 	@echo "... mapmt_calibration_lib"
 	@echo "... src/DetectorConfig.o"
@@ -336,6 +374,9 @@ help:
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/mapmt_bin2root.o"
+	@echo "... src/mapmt_bin2root.i"
+	@echo "... src/mapmt_bin2root.s"
 .PHONY : help
 
 

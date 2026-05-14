@@ -7,7 +7,9 @@ offline calibration:
 - `maps/`: hardware maps, thresholds, gains, and average pedestal files.
 
 The files `maps/setup.txt`, `maps/fiber.map`, `maps/threshold.txt`, and
-`maps/gain.txt` are the default configuration, copied from the legacy
-`TwoModules` setup.
+`maps/gain.txt` are the active default configuration for this suite.
+
+Subdirectories under `maps/` are archived legacy configurations and are not read
+by default.
 
 For a new project, the most important file to rewrite is `maps/fiber.map`.

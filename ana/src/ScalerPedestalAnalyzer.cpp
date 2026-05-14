@@ -5,6 +5,7 @@
 #include <TTree.h>
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -13,6 +14,7 @@
 #include <map>
 #include <memory>
 #include <numeric>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -88,6 +90,16 @@ std::string histName(Address address) {
   return name;
 }
 
+std::vector<long long> parseScalars(std::string line) {
+  const auto comment = line.find('#');
+  if (comment != std::string::npos) line.erase(comment);
+  std::istringstream input(line);
+  std::vector<long long> values;
+  long long value = 0;
+  while (input >> value) values.push_back(value);
+  return values;
+}
+
 }  // namespace
 
 ScalerPedestalAnalyzer::ScalerPedestalAnalyzer(const HardwareMap& hardware) : hardware_(hardware) {}
@@ -104,34 +116,60 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   if (!input) throw std::runtime_error("cannot open scaler input: " + options.input.string());
 
   std::map<Address, std::vector<std::pair<int, double>>> rates;
-  int thr = 0;
-  int gain = 0;
-  unsigned long ref = 0;
-  int freq = 0;
-  const int rowsPerBlock = config.nAsics * config.nPixels;
+  const auto activeAsics = hardware_.activeAsics();
+  if (activeAsics.empty()) {
+    throw std::runtime_error("no active ASICs found; check setup and fiber-map configuration");
+  }
   int nBlocks = 0;
   int badReferenceBlocks = 0;
+  int currentThreshold = 0;
+  bool currentGoodReference = false;
+  double currentDuration = 0.0;
+  std::array<long long, 4> header{};
+  int headerCount = 0;
+  std::string line;
 
-  while (input >> thr >> gain >> ref >> freq) {
-    ++nBlocks;
-    const bool goodReference = ref > 0;
-    if (!goodReference) ++badReferenceBlocks;
-    const double duration = goodReference ? static_cast<double>(ref) / config.clockHz : 0.0;
+  while (std::getline(input, line)) {
+    const auto values = parseScalars(line);
+    if (values.empty()) continue;
 
-    for (int i = 0; i < rowsPerBlock; ++i) {
-      int absoluteChannel = 0;
-      int counts = 0;
-      if (!(input >> absoluteChannel >> counts)) {
-        throw std::runtime_error("truncated scaler block in " + options.input.string());
+    if (values.size() == 1) {
+      if (headerCount >= static_cast<int>(header.size())) {
+        throw std::runtime_error("bad scaler header in " + options.input.string());
       }
-      if (!goodReference) continue;
-
-      const Address address = hardware_.decodeAbsoluteChannel(absoluteChannel);
-      if (!hardware_.isActive(AsicId{address.slot, address.fiber, address.asic})) continue;
-
-      const double rate = static_cast<double>(counts) / duration;
-      rates[address].push_back({thr, rate});
+      header[headerCount++] = values[0];
+      if (headerCount == static_cast<int>(header.size())) {
+        currentThreshold = static_cast<int>(header[0]);
+        const auto ref = static_cast<unsigned long>(header[2]);
+        ++nBlocks;
+        currentGoodReference = ref > 0;
+        if (!currentGoodReference) ++badReferenceBlocks;
+        currentDuration = currentGoodReference ? static_cast<double>(ref) / config.clockHz : 0.0;
+        headerCount = 0;
+      }
+      continue;
     }
+
+    if (headerCount != 0) {
+      throw std::runtime_error("incomplete scaler header before data row in " +
+                               options.input.string());
+    }
+    if (nBlocks == 0) {
+      throw std::runtime_error("data row before scaler header in " + options.input.string());
+    }
+    if (!currentGoodReference) continue;
+
+    const int absoluteChannel = static_cast<int>(values[0]);
+    const int counts = static_cast<int>(values[1]);
+    const Address address = hardware_.decodeAbsoluteChannel(absoluteChannel);
+    if (!hardware_.isActive(AsicId{address.slot, address.fiber, address.asic})) continue;
+
+    const double rate = static_cast<double>(counts) / currentDuration;
+    rates[address].push_back({currentThreshold, rate});
+  }
+
+  if (headerCount != 0) {
+    throw std::runtime_error("incomplete scaler header at end of " + options.input.string());
   }
 
   if (nBlocks == 0) {

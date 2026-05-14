@@ -8,11 +8,14 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <limits>
 #include <map>
 #include <numeric>
+#include <optional>
 #include <sstream>
 #include <stdexcept>
+#include <string>
 
 namespace mapmt {
 
@@ -48,6 +51,239 @@ std::string timeHistName(Address address) {
   return name;
 }
 
+std::string jsonEscape(const std::string& value) {
+  std::ostringstream out;
+  for (unsigned char c : value) {
+    switch (c) {
+      case '"':
+        out << "\\\"";
+        break;
+      case '\\':
+        out << "\\\\";
+        break;
+      case '\b':
+        out << "\\b";
+        break;
+      case '\f':
+        out << "\\f";
+        break;
+      case '\n':
+        out << "\\n";
+        break;
+      case '\r':
+        out << "\\r";
+        break;
+      case '\t':
+        out << "\\t";
+        break;
+      default:
+        if (c < 0x20) {
+          out << "\\u" << std::hex << std::setw(4) << std::setfill('0')
+              << static_cast<int>(c) << std::dec << std::setfill(' ');
+        } else {
+          out << c;
+        }
+        break;
+    }
+  }
+  return out.str();
+}
+
+void writeJsonString(std::ostream& out, const std::string& value) {
+  out << '"' << jsonEscape(value) << '"';
+}
+
+void writeJsonPathOrNull(std::ostream& out, const std::filesystem::path& path) {
+  if (path.empty()) {
+    out << "null";
+    return;
+  }
+  writeJsonString(out, path.string());
+}
+
+void writeJsonAddress(std::ostream& out, Address address, int indent) {
+  const std::string pad(static_cast<std::size_t>(indent), ' ');
+  out << "{\n"
+      << pad << "  \"slot\": " << address.slot << ",\n"
+      << pad << "  \"fiber\": " << address.fiber << ",\n"
+      << pad << "  \"asic\": " << address.asic << ",\n"
+      << pad << "  \"maroc\": " << address.channel << "\n"
+      << pad << "}";
+}
+
+void ensureParentDirectory(const std::filesystem::path& path) {
+  const auto parent = path.parent_path();
+  if (!parent.empty()) std::filesystem::create_directories(parent);
+}
+
+std::filesystem::path resolvedJsonPath(const TimeOptions& options) {
+  if (!options.jsonOutput.empty()) return options.jsonOutput;
+  return options.outputDir / "mapmt_time_calibration.json";
+}
+
+void writeOptionalDouble(std::ostream& out, const std::optional<double>& value) {
+  if (value) {
+    out << *value;
+  } else {
+    out << "null";
+  }
+}
+
+void writeTimeCalibrationJson(const TimeOptions& options, const TimeResult& result,
+                              double referenceTime, std::optional<double> timeMin,
+                              std::optional<double> timeMax) {
+  const auto jsonPath = resolvedJsonPath(options);
+  ensureParentDirectory(jsonPath);
+  std::ofstream out(jsonPath);
+  if (!out) throw std::runtime_error("cannot write JSON output: " + jsonPath.string());
+
+  out << std::setprecision(12);
+  out << "{\n";
+  out << "  \"schema_version\": \"1.0\",\n";
+  out << "  \"calibration_type\": \"mapmt_time_delay\",\n";
+  out << "  \"is_null_calibration\": " << (options.nullCalibration ? "true" : "false") << ",\n";
+  out << "  \"created_by\": ";
+  writeJsonString(out, options.createdBy);
+  if (options.createdAt) {
+    out << ",\n  \"created_at\": ";
+    writeJsonString(out, *options.createdAt);
+  }
+  out << ",\n";
+
+  out << "  \"input\": {\n";
+  out << "    \"file\": ";
+  writeJsonPathOrNull(out, options.input);
+  out << ",\n";
+  out << "    \"format\": ";
+  writeJsonString(out, toString(options.format));
+  out << "\n";
+  out << "  },\n";
+
+  out << "  \"hardware\": {\n";
+  out << "    \"config_file\": ";
+  writeJsonPathOrNull(out, options.configPath);
+  out << ",\n";
+  out << "    \"setup_file\": ";
+  writeJsonPathOrNull(out, options.setupPath);
+  out << ",\n";
+  out << "    \"fiber_map\": ";
+  writeJsonPathOrNull(out, options.fiberMapPath);
+  out << ",\n";
+  out << "    \"threshold_file\": ";
+  writeJsonPathOrNull(out, options.thresholdsPath);
+  out << ",\n";
+  out << "    \"gain_file\": ";
+  writeJsonPathOrNull(out, options.gainsPath);
+  out << ",\n";
+  out << "    \"pmt_index_base\": 1,\n";
+  out << "    \"pixel_index_base\": 1,\n";
+  out << "    \"analysis_pmt_definition\": \"analysis_pmt = pmt - 1\"\n";
+  out << "  },\n";
+
+  out << "  \"method\": {\n";
+  out << "    \"estimator\": \"" << (options.nullCalibration ? "none" : "mean") << "\",\n";
+  out << "    \"min_entries\": " << options.minEntries << ",\n";
+  out << "    \"time_range\": {\n";
+  out << "      \"min\": ";
+  writeOptionalDouble(out, timeMin);
+  out << ",\n";
+  out << "      \"max\": ";
+  writeOptionalDouble(out, timeMax);
+  out << ",\n";
+  out << "      \"source\": \""
+      << (options.nullCalibration ? "none" : (options.minTime || options.maxTime ? "user" : "data"))
+      << "\"\n";
+  out << "    },\n";
+  out << "    \"reference_channel\": ";
+  if (options.reference) {
+    writeJsonAddress(out, *options.reference, 4);
+  } else {
+    out << "null";
+  }
+  out << ",\n";
+  out << "    \"reference_time\": " << referenceTime << "\n";
+  out << "  },\n";
+
+  out << "  \"analysis_convention\": {\n";
+  out << "    \"delay_usage\": \"time_corrected = time_raw - delay + target_time\",\n";
+  out << "    \"null_calibration_usage\": \"if is_null_calibration is true, consumers should leave raw time unchanged\",\n";
+  out << "    \"legacy_target_time\": " << options.legacyTargetTime << ",\n";
+  out << "    \"legacy_target_time_applied\": false\n";
+  out << "  },\n";
+
+  out << "  \"channels\": [\n";
+  for (std::size_t i = 0; i < result.channels.size(); ++i) {
+    const auto& channel = result.channels[i];
+    const int analysisPmt = channel.pmt - 1;
+    out << "    {\n";
+    out << "      \"slot\": " << channel.address.slot << ",\n";
+    out << "      \"fiber\": " << channel.address.fiber << ",\n";
+    out << "      \"asic\": " << channel.address.asic << ",\n";
+    out << "      \"maroc\": " << channel.address.channel << ",\n";
+    out << "      \"module\": " << channel.module << ",\n";
+    out << "      \"pmt\": " << channel.pmt << ",\n";
+    out << "      \"analysis_pmt\": " << analysisPmt << ",\n";
+    out << "      \"pixel\": " << channel.pixel << ",\n";
+    out << "      \"entries\": " << channel.entries << ",\n";
+    out << "      \"delay\": " << channel.mean << ",\n";
+    out << "      \"sigma\": " << channel.sigma << ",\n";
+    out << "      \"offset_vs_reference\": " << channel.offset << "\n";
+    out << "    }" << (i + 1 == result.channels.size() ? "\n" : ",\n");
+  }
+  out << "  ]\n";
+  out << "}\n";
+}
+
+void writeLegacyMapmtOutput(const std::filesystem::path& output,
+                            const std::vector<TimeChannelStats>& channels) {
+  if (output.empty()) return;
+  ensureParentDirectory(output);
+  std::ofstream out(output);
+  if (!out) throw std::runtime_error("cannot write legacy MAPMT output: " + output.string());
+  out << std::setprecision(12);
+  for (const auto& channel : channels) {
+    const int analysisPmt = channel.pmt - 1;
+    if (analysisPmt < 0 || channel.pixel < 1) {
+      throw std::runtime_error(
+          "legacy MAPMT output requires 1-based positive PMT and pixel identifiers");
+    }
+    const int key = analysisPmt * 256 + channel.pixel;
+    out << key << ' ' << channel.mean << '\n';
+  }
+}
+
+TimeResult makeNullCalibrationResult(const HardwareMap& hardware, TimeOptions options) {
+  options.nullCalibration = true;
+  std::filesystem::create_directories(options.outputDir);
+
+  TimeResult result;
+  if (options.writeJson) result.jsonFile = resolvedJsonPath(options);
+  if (!options.legacyMapmtOutput.empty()) result.legacyMapmtFile = options.legacyMapmtOutput;
+
+  for (const Address& address : hardware.activeChannels()) {
+    const auto info = hardware.infoForAddress(address);
+    if (!info) continue;
+
+    TimeChannelStats stats;
+    stats.address = address;
+    stats.module = info->module;
+    stats.pmt = info->pmt;
+    stats.tile = info->tile;
+    stats.pixel = hardware.pixelFromMaroc(address.channel);
+    stats.entries = 0;
+    stats.mean = 0.0;
+    stats.sigma = 0.0;
+    stats.offset = 0.0;
+    result.channels.push_back(stats);
+  }
+
+  if (options.writeJson) {
+    writeTimeCalibrationJson(options, result, 0.0, std::nullopt, std::nullopt);
+  }
+  writeLegacyMapmtOutput(options.legacyMapmtOutput, result.channels);
+  return result;
+}
+
 }  // namespace
 
 TimeCalibration::TimeCalibration(const HardwareMap& hardware) : hardware_(hardware) {}
@@ -77,6 +313,8 @@ std::string toString(TimeInputFormat format) {
 }
 
 TimeResult TimeCalibration::run(const TimeOptions& options) const {
+  if (options.nullCalibration) return makeNullCalibrationResult(hardware_, options);
+
   if (options.input.empty()) throw std::runtime_error("missing time input file");
   std::filesystem::create_directories(options.outputDir);
 
@@ -133,6 +371,7 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   }
 
   if (times.empty()) {
+    if (options.allowEmptyInput) return makeNullCalibrationResult(hardware_, options);
     throw std::runtime_error("no decoded TDC hits matched the hardware map");
   }
 
@@ -145,6 +384,7 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
     if (static_cast<int>(values.size()) >= options.minEntries) means[address] = meanOf(values);
   }
   if (means.empty()) {
+    if (options.allowEmptyInput) return makeNullCalibrationResult(hardware_, options);
     throw std::runtime_error("no channel has enough entries for time calibration");
   }
 
@@ -161,6 +401,8 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   TimeResult result;
   result.rootFile = options.outputDir / "time_calibration.root";
   result.offsetsCsv = options.outputDir / "time_offsets.csv";
+  if (options.writeJson) result.jsonFile = resolvedJsonPath(options);
+  if (!options.legacyMapmtOutput.empty()) result.legacyMapmtFile = options.legacyMapmtOutput;
 
   std::ofstream csv(result.offsetsCsv);
   csv << "slot,fiber,asic,maroc,pixel,module,pmt,tile,entries,mean_time,sigma_time,offset\n";
@@ -244,6 +486,11 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
 
   tree.Write();
   root.Close();
+
+  if (options.writeJson) {
+    writeTimeCalibrationJson(options, result, referenceMean, timeMin, timeMax);
+  }
+  writeLegacyMapmtOutput(options.legacyMapmtOutput, result.channels);
   return result;
 }
 

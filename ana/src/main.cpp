@@ -10,6 +10,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace {
@@ -43,14 +44,21 @@ void usage() {
       << "MAPMT calibration toolkit\n\n"
       << "Commands:\n"
       << "  inspect-map [--map fiber.map] [--setup setup.txt] [--thresholds threshold.txt] [--gains gain.txt]\n"
-      << "  pedestal --input rich_pedestal.txt [--map fiber.map] --output outdir [--thresholds threshold.txt] [--gains gain.txt]\n"
+      << "  pedestal --input rich_pedestal.txt [--map fiber.map] [--setup setup.txt] --output outdir [--thresholds threshold.txt] [--gains gain.txt]\n"
       << "  thresholds --chip-pedestals chip_pedestals.txt --output threshold.txt [--offset 25]\n"
-      << "  time --input decoded_tdc.txt [--map fiber.map] --output outdir [--format auto|abs|address|event-address]\n\n"
+      << "  time --input decoded_tdc.txt [--map fiber.map] [--setup setup.txt] --output outdir [--format auto|abs|address|event-address]\n"
+      << "  time --null-calibration [--map fiber.map] [--setup setup.txt] --output outdir\n\n"
       << "Common options:\n"
       << "  --config detector.conf     override detector constants\n"
       << "  --slot-base 3              absolute-channel decoding slot base\n"
       << "  --clock-hz 125000000       scaler reference clock\n"
       << "  --threshold-offset 25      pedestal mean offset for suggested thresholds\n\n"
+      << "Time output options:\n"
+      << "  --json-output FILE         write MAPMT JSON time calibration to FILE\n"
+      << "  --legacy-mapmt-output FILE write legacy MAPMT_time_calibration.dat-style file\n"
+      << "  --no-json                  disable JSON output\n"
+      << "  --null-calibration         write a zero/no-op calibration without TDC input\n"
+      << "  --allow-empty              fall back to a zero/no-op calibration if input has no usable hits\n\n"
       << "If MAPMT_SUITE is set, default files are read from:\n"
       << "  $MAPMT_SUITE/cnf/detector.conf\n"
       << "  $MAPMT_SUITE/cnf/maps/{setup.txt,fiber.map,threshold.txt,gain.txt}\n";
@@ -107,16 +115,30 @@ mapmt::DetectorConfig readConfig(const Args& args) {
   return config;
 }
 
-mapmt::HardwareMap loadHardware(const Args& args) {
-  mapmt::HardwareMap hardware(readConfig(args));
-  const auto setup = optionalPathFromSuite(args, "--setup", "cnf/maps/setup.txt");
-  if (!setup.empty()) hardware.loadSetup(setup);
-  hardware.loadFiberMap(requiredPathFromSuite(args, "--map", "cnf/maps/fiber.map"));
-  const auto thresholds = optionalPathFromSuite(args, "--thresholds", "cnf/maps/threshold.txt");
-  if (!thresholds.empty()) hardware.loadThresholds(thresholds);
-  const auto gains = optionalPathFromSuite(args, "--gains", "cnf/maps/gain.txt");
-  if (!gains.empty()) hardware.loadGains(gains);
-  return hardware;
+struct LoadedHardware {
+  mapmt::HardwareMap hardware;
+  std::filesystem::path configPath;
+  std::filesystem::path setupPath;
+  std::filesystem::path fiberMapPath;
+  std::filesystem::path thresholdsPath;
+  std::filesystem::path gainsPath;
+
+  explicit LoadedHardware(mapmt::DetectorConfig config) : hardware(std::move(config)) {}
+};
+
+LoadedHardware loadHardware(const Args& args) {
+  LoadedHardware loaded(readConfig(args));
+  loaded.configPath = optionalPathFromSuite(args, "--config", "cnf/detector.conf");
+  loaded.setupPath = optionalPathFromSuite(args, "--setup", "cnf/maps/setup.txt");
+  loaded.fiberMapPath = requiredPathFromSuite(args, "--map", "cnf/maps/fiber.map");
+  loaded.thresholdsPath = optionalPathFromSuite(args, "--thresholds", "cnf/maps/threshold.txt");
+  loaded.gainsPath = optionalPathFromSuite(args, "--gains", "cnf/maps/gain.txt");
+
+  if (!loaded.setupPath.empty()) loaded.hardware.loadSetup(loaded.setupPath);
+  loaded.hardware.loadFiberMap(loaded.fiberMapPath);
+  if (!loaded.thresholdsPath.empty()) loaded.hardware.loadThresholds(loaded.thresholdsPath);
+  if (!loaded.gainsPath.empty()) loaded.hardware.loadGains(loaded.gainsPath);
+  return loaded;
 }
 
 mapmt::Address parseAddress(const std::string& text) {
@@ -133,13 +155,13 @@ mapmt::Address parseAddress(const std::string& text) {
 }
 
 int runInspectMap(const Args& args) {
-  const auto hardware = loadHardware(args);
-  std::cout << hardware.summary();
+  const auto loaded = loadHardware(args);
+  std::cout << loaded.hardware.summary();
   return EXIT_SUCCESS;
 }
 
 int runPedestal(const Args& args) {
-  const auto hardware = loadHardware(args);
+  const auto loaded = loadHardware(args);
   mapmt::PedestalOptions options;
   options.input = requiredPath(args, "--input");
   options.outputDir = requiredPath(args, "--output");
@@ -148,7 +170,7 @@ int runPedestal(const Args& args) {
   }
   options.writeRoot = !args.has("--no-root");
 
-  mapmt::ScalerPedestalAnalyzer analyzer(hardware);
+  mapmt::ScalerPedestalAnalyzer analyzer(loaded.hardware);
   const auto result = analyzer.run(options);
   std::cout << "channels=" << result.channels.size() << '\n';
   std::cout << "channel_stats=" << result.channelStatsCsv << '\n';
@@ -168,9 +190,15 @@ int runThresholds(const Args& args) {
 }
 
 int runTime(const Args& args) {
-  const auto hardware = loadHardware(args);
+  const auto loaded = loadHardware(args);
   mapmt::TimeOptions options;
-  options.input = requiredPath(args, "--input");
+  options.nullCalibration = args.has("--null-calibration");
+  if (options.nullCalibration) {
+    const std::string input = args.get("--input");
+    if (!input.empty()) options.input = input;
+  } else {
+    options.input = requiredPath(args, "--input");
+  }
   options.outputDir = requiredPath(args, "--output");
   options.format = mapmt::parseTimeInputFormat(args.get("--format", "auto"));
   if (!args.get("--reference").empty()) options.reference = parseAddress(args.get("--reference"));
@@ -178,12 +206,31 @@ int runTime(const Args& args) {
   if (!args.get("--bins").empty()) options.bins = std::stoi(args.get("--bins"));
   if (!args.get("--min-time").empty()) options.minTime = std::stod(args.get("--min-time"));
   if (!args.get("--max-time").empty()) options.maxTime = std::stod(args.get("--max-time"));
+  if (!args.get("--json-output").empty()) options.jsonOutput = args.get("--json-output");
+  if (!args.get("--legacy-mapmt-output").empty()) {
+    options.legacyMapmtOutput = args.get("--legacy-mapmt-output");
+  }
+  if (!args.get("--created-at").empty()) options.createdAt = args.get("--created-at");
+  if (!args.get("--legacy-target-time").empty()) {
+    options.legacyTargetTime = std::stod(args.get("--legacy-target-time"));
+  }
+  options.allowEmptyInput = args.has("--allow-empty");
+  options.writeJson = !args.has("--no-json");
+  options.configPath = loaded.configPath;
+  options.setupPath = loaded.setupPath;
+  options.fiberMapPath = loaded.fiberMapPath;
+  options.thresholdsPath = loaded.thresholdsPath;
+  options.gainsPath = loaded.gainsPath;
 
-  mapmt::TimeCalibration calibration(hardware);
+  mapmt::TimeCalibration calibration(loaded.hardware);
   const auto result = calibration.run(options);
   std::cout << "channels=" << result.channels.size() << '\n';
-  std::cout << "offsets=" << result.offsetsCsv << '\n';
-  std::cout << "root=" << result.rootFile << '\n';
+  if (!result.offsetsCsv.empty()) std::cout << "offsets=" << result.offsetsCsv << '\n';
+  if (!result.rootFile.empty()) std::cout << "root=" << result.rootFile << '\n';
+  if (!result.jsonFile.empty()) std::cout << "json=" << result.jsonFile << '\n';
+  if (!result.legacyMapmtFile.empty()) {
+    std::cout << "legacy_mapmt=" << result.legacyMapmtFile << '\n';
+  }
   return EXIT_SUCCESS;
 }
 

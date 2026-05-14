@@ -10,6 +10,13 @@ there (`cnf/maps/fiber.map`, `cnf/maps/setup.txt`, `cnf/maps/threshold.txt`,
 and `cnf/maps/gain.txt`) are the default configuration and do not require any
 path into `clas_RICH_software`.
 
+The current defaults are the dRICH prototype maps imported from
+`clas_RICH_software/suite2.0/maps/`. The same files are also archived in
+`cnf/maps/dRICH_prototype/` so the active defaults can be compared or restored.
+
+Archived subdirectories under `cnf/maps/` are never selected automatically. Use
+them only by passing explicit paths such as `--map cnf/maps/RICH2/fiber.map`.
+
 `MAPMT_SUITE` is the suite root, the replacement for `RICH_SUITE`.
 
 ## 1. DAQ Configuration: `daq/daq.env`
@@ -60,6 +67,11 @@ setup_header_lines = 23
 
 in `cnf/detector.conf`.
 
+The new `HardwareMap` treats `fiber.map` as the full electronics map and
+`setup.txt` as the active-fiber filter. If `setup.txt` is omitted, every ASIC in
+`fiber.map` is treated as active. If `setup.txt` is present, only fibers with
+`nasics > 0` are active.
+
 ## 3. `fiber.map`
 
 This is the most important map. It links electronics to detector geometry:
@@ -91,6 +103,10 @@ For a new project, rebuild this file with:
 If this file is wrong, the whole calibration will be assigned to the wrong
 PMT/channel.
 
+The dRICH prototype `suite2.0` files use a large `fiber.map` plus a smaller
+active `setup.txt`. Keep both together when moving pedestal files between
+machines.
+
 ## 4. `threshold.txt`
 
 Format:
@@ -113,6 +129,12 @@ threshold = ceil(ASIC_pedestal_mean) + offset
 ```
 
 with a typical offset of `25`.
+
+The imported dRICH prototype `threshold.txt` has 20 entries, while the imported
+`setup.txt` selects 23 ASICs. Missing threshold entries fall back to
+`default_threshold` from `cnf/detector.conf`. This is acceptable for reading old
+pedestal scans, but a new DAQ setup should regenerate thresholds after the
+pedestal run.
 
 ## 5. `gain.txt`
 
@@ -149,7 +171,25 @@ slot fiber asic module pmt mean rms
 
 This is the ASIC/PMT summary used to generate `threshold.txt`.
 
-## 7. `cnf/detector.conf`
+## 7. suite2.0 Scaler Pedestal Files
+
+The dRICH prototype scaler files under `suite2.0/data/ped/` use the standard
+four-line block header:
+
+```text
+threshold
+gain
+reference_clock
+frequency
+absolute_channel counts
+...
+```
+
+The block can correspond to a single fiber rather than the full active setup.
+The pedestal parser therefore reads the file block-by-block and filters each
+decoded channel through `setup.txt` and `fiber.map`.
+
+## 8. `cnf/detector.conf`
 
 This file contains electronics constants and decoding conventions. Parameters
 to check for a new setup:
