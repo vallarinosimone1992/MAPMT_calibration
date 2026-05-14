@@ -38,6 +38,19 @@ the CMake build strips ROOT-provided `-std=...` flags by default so the project
 can compile as C++17. This behavior can be disabled with
 `-DMAPMT_STRIP_ROOT_CXX_STANDARD=OFF` only if a local ROOT setup requires it.
 
+If an older ROOT build still fails inside ROOT or libstdc++ headers, build the
+CSV/JSON analysis without ROOT:
+
+```bash
+cmake -S "$MAPMT_SUITE/ana" -B "$MAPMT_SUITE/ana/build" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DMAPMT_ENABLE_ROOT=OFF
+cmake --build "$MAPMT_SUITE/ana/build"
+```
+
+In this mode `mapmt_calibrate` is built and writes CSV/JSON outputs, while ROOT
+files and `mapmt_bin2root` are disabled.
+
 ## DAQ Scripts
 
 The scripts that produce calibration files with `ssptest_*` live in `daq/`.

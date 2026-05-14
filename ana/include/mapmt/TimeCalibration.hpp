@@ -27,6 +27,7 @@ struct TimeOptions {
   std::optional<double> maxTime;
   bool nullCalibration = false;
   bool allowEmptyInput = false;
+  bool writeRoot = true;
   bool writeJson = true;
   std::filesystem::path jsonOutput;
   std::filesystem::path legacyMapmtOutput;

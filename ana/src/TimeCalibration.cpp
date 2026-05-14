@@ -1,14 +1,22 @@
 #include "mapmt/TimeCalibration.hpp"
 
+#ifndef MAPMT_ENABLE_ROOT
+#define MAPMT_ENABLE_ROOT 1
+#endif
+
+#if MAPMT_ENABLE_ROOT
 #include <TFile.h>
 #include <TH1D.h>
 #include <TTree.h>
+#endif
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
+#include <iostream>
 #include <limits>
 #include <map>
 #include <numeric>
@@ -44,12 +52,14 @@ double rmsOf(const std::vector<double>& values, double mean) {
   return std::sqrt(sum / static_cast<double>(values.size()));
 }
 
+#if MAPMT_ENABLE_ROOT
 std::string timeHistName(Address address) {
   char name[128];
   std::snprintf(name, sizeof(name), "hTime_%d_%02d_%d_%02d", address.slot, address.fiber,
                 address.asic, address.channel);
   return name;
 }
+#endif
 
 std::string jsonEscape(const std::string& value) {
   std::ostringstream out;
@@ -399,14 +409,24 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   }
 
   TimeResult result;
-  result.rootFile = options.outputDir / "time_calibration.root";
   result.offsetsCsv = options.outputDir / "time_offsets.csv";
   if (options.writeJson) result.jsonFile = resolvedJsonPath(options);
   if (!options.legacyMapmtOutput.empty()) result.legacyMapmtFile = options.legacyMapmtOutput;
 
+#if MAPMT_ENABLE_ROOT
+  const bool writeRoot = options.writeRoot;
+#else
+  const bool writeRoot = false;
+  if (options.writeRoot) {
+    std::cerr << "warning: ROOT support is disabled in this build; skipping time_calibration.root\n";
+  }
+#endif
+  if (writeRoot) result.rootFile = options.outputDir / "time_calibration.root";
+
   std::ofstream csv(result.offsetsCsv);
   csv << "slot,fiber,asic,maroc,pixel,module,pmt,tile,entries,mean_time,sigma_time,offset\n";
 
+#if MAPMT_ENABLE_ROOT
   TFile root(result.rootFile.string().c_str(), "RECREATE");
   TTree tree("time_offsets", "MAPMT time calibration offsets");
   int outSlot = 0;
@@ -433,6 +453,7 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
   tree.Branch("mean", &outMean);
   tree.Branch("sigma", &outSigma);
   tree.Branch("offset", &outOffset);
+#endif
 
   for (const auto& [address, values] : times) {
     if (static_cast<int>(values.size()) < options.minEntries) continue;
@@ -443,14 +464,18 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
     const double sigma = rmsOf(values, mean);
     const double offset = referenceMean - mean;
 
+#if MAPMT_ENABLE_ROOT
     TH1D hist(timeHistName(address).c_str(), "", options.bins, timeMin, timeMax);
     hist.GetXaxis()->SetTitle("TDC time");
     hist.GetYaxis()->SetTitle("Entries");
     for (double value : values) hist.Fill(value);
-    hist.SetTitle(Form("M%d PMT%d pixel %d slot %d fiber %d asic %d ch %d", info->module,
-                       info->pmt, hardware_.pixelFromMaroc(address.channel), address.slot,
-                       address.fiber, address.asic, address.channel));
+    char title[256];
+    std::snprintf(title, sizeof(title), "M%d PMT%d pixel %d slot %d fiber %d asic %d ch %d",
+                  info->module, info->pmt, hardware_.pixelFromMaroc(address.channel),
+                  address.slot, address.fiber, address.asic, address.channel);
+    hist.SetTitle(title);
     hist.Write();
+#endif
 
     TimeChannelStats stats;
     stats.address = address;
@@ -469,6 +494,7 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
         << ',' << stats.entries << ',' << stats.mean << ',' << stats.sigma << ',' << stats.offset
         << '\n';
 
+#if MAPMT_ENABLE_ROOT
     outSlot = address.slot;
     outFiber = address.fiber;
     outAsic = address.asic;
@@ -482,10 +508,13 @@ TimeResult TimeCalibration::run(const TimeOptions& options) const {
     outSigma = stats.sigma;
     outOffset = stats.offset;
     tree.Fill();
+#endif
   }
 
+#if MAPMT_ENABLE_ROOT
   tree.Write();
   root.Close();
+#endif
 
   if (options.writeJson) {
     writeTimeCalibrationJson(options, result, referenceMean, timeMin, timeMax);

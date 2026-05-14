@@ -1,12 +1,19 @@
 #include "mapmt/ScalerPedestalAnalyzer.hpp"
 
+#ifndef MAPMT_ENABLE_ROOT
+#define MAPMT_ENABLE_ROOT 1
+#endif
+
+#if MAPMT_ENABLE_ROOT
 #include <TFile.h>
 #include <TH1D.h>
 #include <TTree.h>
+#endif
 
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdio>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -83,12 +90,14 @@ void ensureOutputDir(const std::filesystem::path& path) {
   }
 }
 
+#if MAPMT_ENABLE_ROOT
 std::string histName(Address address) {
   char name[128];
   std::snprintf(name, sizeof(name), "hCount_%d_%02d_%d_%02d", address.slot, address.fiber,
                 address.asic, address.channel);
   return name;
 }
+#endif
 
 std::vector<long long> parseScalars(std::string line) {
   const auto comment = line.find('#');
@@ -181,10 +190,19 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   }
 
   PedestalResult result;
-  result.rootFile = options.outputDir / "histo.root";
   result.channelStatsCsv = options.outputDir / "channel_stats.csv";
   result.chipPedestalsTxt = options.outputDir / "chip_pedestals.txt";
   result.suggestedThresholdsTxt = options.outputDir / "thresholds_suggested.txt";
+
+#if MAPMT_ENABLE_ROOT
+  const bool writeRoot = options.writeRoot;
+#else
+  const bool writeRoot = false;
+  if (options.writeRoot) {
+    std::cerr << "warning: ROOT support is disabled in this build; skipping histo.root\n";
+  }
+#endif
+  if (writeRoot) result.rootFile = options.outputDir / "histo.root";
 
   std::ofstream channelCsv(result.channelStatsCsv);
   std::ofstream chipTxt(result.chipPedestalsTxt);
@@ -196,6 +214,7 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
                 "pedestal_rms_dac,max_rate_cps,flat_rate_mean_cps,flat_rate_rms_cps,"
                 "shoulder_rate_mean_cps,shoulder_rate_rms_cps,threshold_dac,gain\n";
 
+#if MAPMT_ENABLE_ROOT
   std::unique_ptr<TFile> rootFile;
   std::unique_ptr<TTree> statsTree;
   int outSlot = 0;
@@ -216,7 +235,7 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
   double outFlatRms = 0.0;
   double outShoulderMean = 0.0;
   double outShoulderRms = 0.0;
-  if (options.writeRoot) {
+  if (writeRoot) {
     rootFile = std::make_unique<TFile>(result.rootFile.string().c_str(), "RECREATE");
     statsTree = std::make_unique<TTree>("channel_stats", "MAPMT scaler pedestal calibration");
     statsTree->Branch("slot", &outSlot);
@@ -238,9 +257,12 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
     statsTree->Branch("shoulder_rate_mean", &outShoulderMean);
     statsTree->Branch("shoulder_rate_rms", &outShoulderRms);
   }
+#endif
 
   std::map<AsicId, ChipAccumulator> chips;
+#if MAPMT_ENABLE_ROOT
   const int nBins = config.thresholdMax - config.thresholdMin + 1;
+#endif
 
   for (const Address& address : hardware_.activeChannels()) {
     auto info = hardware_.infoForAddress(address);
@@ -256,23 +278,27 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
     PlainMoments shoulder;
     double maxRate = 0.0;
 
+#if MAPMT_ENABLE_ROOT
     TH1D* hist = nullptr;
-    if (options.writeRoot) {
+    if (writeRoot) {
       hist = new TH1D(histName(address).c_str(), "", nBins, config.thresholdMin - 0.5,
                       config.thresholdMax + 0.5);
       hist->GetXaxis()->SetTitle("Threshold [DAC]");
       hist->GetYaxis()->SetTitle("Count rate [cps]");
     }
+#endif
 
     for (const auto& [value, rate] : measurements) {
       pedestal.add(value, rate);
       maxRate = std::max(maxRate, rate);
       if (value >= config.flatRateMin && value <= config.flatRateMax) flat.add(rate);
       if (value >= threshold && value <= threshold + config.shoulderRange) shoulder.add(rate);
+#if MAPMT_ENABLE_ROOT
       if (hist) {
         const int bin = hist->FindBin(value);
         hist->SetBinContent(bin, hist->GetBinContent(bin) + rate);
       }
+#endif
     }
 
     ChannelStats stats;
@@ -323,10 +349,13 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
       ++chip.n;
     }
 
-    if (options.writeRoot && hist) {
-      hist->SetTitle(Form("M%d PMT%d pixel %d slot %d fiber %d asic %d ch %d", stats.module,
-                          stats.pmt, stats.pixel, stats.address.slot, stats.address.fiber,
-                          stats.address.asic, stats.address.channel));
+#if MAPMT_ENABLE_ROOT
+    if (writeRoot && hist) {
+      char title[256];
+      std::snprintf(title, sizeof(title), "M%d PMT%d pixel %d slot %d fiber %d asic %d ch %d",
+                    stats.module, stats.pmt, stats.pixel, stats.address.slot,
+                    stats.address.fiber, stats.address.asic, stats.address.channel);
+      hist->SetTitle(title);
       hist->Write();
 
       outSlot = stats.address.slot;
@@ -350,6 +379,7 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
       statsTree->Fill();
       delete hist;
     }
+#endif
   }
 
   for (const auto& [id, chip] : chips) {
@@ -365,10 +395,12 @@ PedestalResult ScalerPedestalAnalyzer::run(const PedestalOptions& options) const
                   << std::setw(4) << suggestedThreshold << '\n';
   }
 
-  if (options.writeRoot) {
+#if MAPMT_ENABLE_ROOT
+  if (writeRoot) {
     statsTree->Write();
     rootFile->Close();
   }
+#endif
 
   return result;
 }

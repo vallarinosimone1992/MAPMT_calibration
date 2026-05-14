@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-find_package(ROOT REQUIRED COMPONENTS Core Hist Tree RIO)
+option(MAPMT_ENABLE_ROOT "Build ROOT histogram/tree outputs and the binary ROOT converter" ON)
 
 option(MAPMT_STRIP_ROOT_CXX_STANDARD
   "Remove -std=... flags injected by ROOT; MAPMT_calibration controls the C++ standard"
@@ -44,22 +44,30 @@ function(mapmt_strip_std_flag_from_target target_name)
   )
 endfunction()
 
-if(MAPMT_STRIP_ROOT_CXX_STANDARD)
-  foreach(flag_variable
-      CMAKE_CXX_FLAGS
-      CMAKE_CXX_FLAGS_DEBUG
-      CMAKE_CXX_FLAGS_RELEASE
-      CMAKE_CXX_FLAGS_RELWITHDEBINFO
-      CMAKE_CXX_FLAGS_MINSIZEREL)
-    mapmt_strip_std_flag_from_variable("${flag_variable}")
-  endforeach()
+if(MAPMT_ENABLE_ROOT)
+  find_package(ROOT REQUIRED COMPONENTS Core Hist Tree RIO)
 
-  foreach(root_target ROOT::Core ROOT::Hist ROOT::Tree ROOT::RIO)
-    mapmt_strip_std_flag_from_target("${root_target}")
-  endforeach()
+  if(MAPMT_STRIP_ROOT_CXX_STANDARD)
+    foreach(flag_variable
+        CMAKE_CXX_FLAGS
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        CMAKE_CXX_FLAGS_MINSIZEREL)
+      mapmt_strip_std_flag_from_variable("${flag_variable}")
+    endforeach()
+
+    foreach(root_target ROOT::Core ROOT::Hist ROOT::Tree ROOT::RIO)
+      mapmt_strip_std_flag_from_target("${root_target}")
+    endforeach()
+  endif()
 endif()
 
-message(STATUS "Using ROOT ${ROOT_VERSION}")
+if(MAPMT_ENABLE_ROOT)
+  message(STATUS "Using ROOT ${ROOT_VERSION}")
+else()
+  message(STATUS "Building without ROOT support")
+endif()
 message(STATUS "Using C++ standard ${CMAKE_CXX_STANDARD}")
 
 add_library(mapmt_calibration_lib
@@ -76,13 +84,18 @@ target_include_directories(mapmt_calibration_lib
 
 target_compile_features(mapmt_calibration_lib PUBLIC cxx_std_17)
 
-target_link_libraries(mapmt_calibration_lib
-  PUBLIC
-    ROOT::Core
-    ROOT::Hist
-    ROOT::Tree
-    ROOT::RIO
-)
+if(MAPMT_ENABLE_ROOT)
+  target_compile_definitions(mapmt_calibration_lib PUBLIC MAPMT_ENABLE_ROOT=1)
+  target_link_libraries(mapmt_calibration_lib
+    PUBLIC
+      ROOT::Core
+      ROOT::Hist
+      ROOT::Tree
+      ROOT::RIO
+  )
+else()
+  target_compile_definitions(mapmt_calibration_lib PUBLIC MAPMT_ENABLE_ROOT=0)
+endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND
    CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9)
@@ -101,11 +114,15 @@ target_compile_options(mapmt_calibrate
     $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall -Wextra -Wpedantic>
 )
 
-add_executable(mapmt_bin2root src/mapmt_bin2root.cpp)
-target_link_libraries(mapmt_bin2root PRIVATE mapmt_calibration_lib)
-target_compile_options(mapmt_bin2root
-  PRIVATE
-    $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall -Wextra -Wpedantic>
-)
+if(MAPMT_ENABLE_ROOT)
+  add_executable(mapmt_bin2root src/mapmt_bin2root.cpp)
+  target_link_libraries(mapmt_bin2root PRIVATE mapmt_calibration_lib)
+  target_compile_options(mapmt_bin2root
+    PRIVATE
+      $<$<CXX_COMPILER_ID:AppleClang,Clang,GNU>:-Wall -Wextra -Wpedantic>
+  )
 
-install(TARGETS mapmt_calibrate mapmt_bin2root RUNTIME DESTINATION bin)
+  install(TARGETS mapmt_calibrate mapmt_bin2root RUNTIME DESTINATION bin)
+else()
+  install(TARGETS mapmt_calibrate RUNTIME DESTINATION bin)
+endif()

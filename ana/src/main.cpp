@@ -53,6 +53,8 @@ void usage() {
       << "  --slot-base 3              absolute-channel decoding slot base\n"
       << "  --clock-hz 125000000       scaler reference clock\n"
       << "  --threshold-offset 25      pedestal mean offset for suggested thresholds\n\n"
+      << "ROOT output options:\n"
+      << "  --no-root                  skip ROOT output files\n\n"
       << "Time output options:\n"
       << "  --json-output FILE         write MAPMT JSON time calibration to FILE\n"
       << "  --legacy-mapmt-output FILE write legacy MAPMT_time_calibration.dat-style file\n"
@@ -176,7 +178,7 @@ int runPedestal(const Args& args) {
   std::cout << "channel_stats=" << result.channelStatsCsv << '\n';
   std::cout << "chip_pedestals=" << result.chipPedestalsTxt << '\n';
   std::cout << "suggested_thresholds=" << result.suggestedThresholdsTxt << '\n';
-  if (options.writeRoot) std::cout << "root=" << result.rootFile << '\n';
+  if (!result.rootFile.empty()) std::cout << "root=" << result.rootFile << '\n';
   return EXIT_SUCCESS;
 }
 
@@ -215,6 +217,7 @@ int runTime(const Args& args) {
     options.legacyTargetTime = std::stod(args.get("--legacy-target-time"));
   }
   options.allowEmptyInput = args.has("--allow-empty");
+  options.writeRoot = !args.has("--no-root");
   options.writeJson = !args.has("--no-json");
   options.configPath = loaded.configPath;
   options.setupPath = loaded.setupPath;

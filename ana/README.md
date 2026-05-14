@@ -37,6 +37,19 @@ configure explicitly with:
 cmake -S . -B build -DCMAKE_CXX_STANDARD=17 -DMAPMT_STRIP_ROOT_CXX_STANDARD=ON
 ```
 
+If ROOT 6.24 was itself built with C++14 and fails when included from C++17
+code, build without ROOT support:
+
+```bash
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DMAPMT_ENABLE_ROOT=OFF
+cmake --build build
+```
+
+This builds `mapmt_calibrate` only. Pedestal CSVs, threshold files, time
+calibration CSVs, JSON output, and legacy time calibration export remain
+available; ROOT files and `mapmt_bin2root` are not built.
+
 Example from the suite root:
 
 ```bash

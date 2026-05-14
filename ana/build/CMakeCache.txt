@@ -216,6 +216,9 @@ CMAKE_TAPI:FILEPATH=/Library/Developer/CommandLineTools/usr/bin/tapi
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
+//Build ROOT histogram/tree outputs and the binary ROOT converter
+MAPMT_ENABLE_ROOT:BOOL=ON
+
 //Remove -std=... flags injected by ROOT; MAPMT_calibration controls
 // the C++ standard
 MAPMT_STRIP_ROOT_CXX_STANDARD:BOOL=ON
