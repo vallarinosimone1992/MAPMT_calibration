@@ -1,0 +1,5 @@
+default_mapset = dRICH_prototype
+source = clas_RICH_software/suite2.0/maps/dRICH_prototype
+active_files = setup.txt fiber.map threshold.txt gain.txt PmtPedestal.txt
+threshold_source = threshold_25.txt
+notes = Top-level files in this directory are the runtime defaults used by MAPMT_SUITE.

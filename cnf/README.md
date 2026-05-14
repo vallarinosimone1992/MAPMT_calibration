@@ -7,7 +7,9 @@ offline calibration:
 - `maps/`: hardware maps, thresholds, gains, and average pedestal files.
 
 The files `maps/setup.txt`, `maps/fiber.map`, `maps/threshold.txt`, and
-`maps/gain.txt` are the active default configuration for this suite.
+`maps/gain.txt` are the active default configuration for this suite. They are
+the dRICH prototype map set imported from `suite2.0`; see
+`maps/default_mapset.txt`.
 
 Subdirectories under `maps/` are archived legacy configurations and are not read
 by default.

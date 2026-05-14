@@ -14,6 +14,7 @@ are currently the dRICH prototype maps imported from
 - `PmtPedestal.txt`
 
 These are the files used by the examples in the top-level `README.md`.
+`default_mapset.txt` records the active default map family and import source.
 
 ## Archived Legacy Configurations
 
