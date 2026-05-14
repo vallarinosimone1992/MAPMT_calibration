@@ -23,11 +23,20 @@ sensors, fibers, and electronics described by that setup. A copy is kept under
 
 ```bash
 export MAPMT_SUITE=/path/to/MAPMT_calibration
+source /opt/root-cern/bin/thisroot.sh
+rm -rf "$MAPMT_SUITE/ana/build"
 cmake -S "$MAPMT_SUITE/ana" -B "$MAPMT_SUITE/ana/build"
 cmake --build "$MAPMT_SUITE/ana/build"
 ```
 
 Requires ROOT with either `root-config` or a CMake package available.
+The analysis requires a C++17-capable compiler. If ROOT headers fail with
+template errors in `ROOT/TypeTraits.hxx`, rebuild from a clean `ana/build`
+directory and check that the verbose compile command contains `-std=c++17`.
+Some ROOT 6.24 installations report `-std=c++14` in `root-config --cflags`;
+the CMake build strips ROOT-provided `-std=...` flags by default so the project
+can compile as C++17. This behavior can be disabled with
+`-DMAPMT_STRIP_ROOT_CXX_STANDARD=OFF` only if a local ROOT setup requires it.
 
 ## DAQ Scripts
 

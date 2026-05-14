@@ -14,6 +14,29 @@ cmake -S . -B build
 cmake --build build
 ```
 
+On a new Linux machine, always configure from a clean build directory:
+
+```bash
+rm -rf build
+source /opt/root-cern/bin/thisroot.sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --verbose
+```
+
+The verbose compile line must contain `-std=c++17` or a newer C++ standard. If
+ROOT headers fail in `ROOT/TypeTraits.hxx` with template redefinition errors,
+the usual cause is that the project is being compiled without C++17 or with a
+stale build directory from another machine.
+
+ROOT 6.24 often reports `-std=c++14` through `root-config --cflags`. The CMake
+build removes ROOT-provided `-std=...` flags by default and then applies the
+project C++17 standard. If the verbose build still shows a later `-std=c++14`,
+configure explicitly with:
+
+```bash
+cmake -S . -B build -DCMAKE_CXX_STANDARD=17 -DMAPMT_STRIP_ROOT_CXX_STANDARD=ON
+```
+
 Example from the suite root:
 
 ```bash
