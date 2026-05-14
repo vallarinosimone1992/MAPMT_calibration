@@ -11,7 +11,7 @@ available.
 2. Edit at least `MAPMT_DAQ_EXEDIR` if the `ssptest_*` commands are not in `PATH`.
 3. Check scan ranges, gains, and durations.
 
-Example:
+Example from a bash shell:
 
 ```bash
 export MAPMT_SUITE=/path/to/MAPMT_calibration
@@ -23,6 +23,28 @@ vi daq.env
 ./rich_dark.sh
 ./rate_scan.sh 100 0 230
 ./rich_tdc.sh
+```
+
+If the DAQ account uses `csh` or `tcsh`, do not source `daq.env` directly. It
+uses bash syntax and is read internally by the wrapper scripts. Instead:
+
+```csh
+cd /path/to/MAPMT_daq_only/daq
+cp setup_daq.csh.example setup_daq.csh
+cp daq.env.example daq.env
+vi setup_daq.csh
+vi daq.env
+source setup_daq.csh
+./configure_all.sh 230 64 0
+./rich_pedestal.sh
+```
+
+The `./*.sh` commands still run under bash because of their shebang line. This
+requires `/usr/bin/env bash` to find bash on the DAQ machine. Check with:
+
+```csh
+which bash
+/usr/bin/env bash --version
 ```
 
 ## Main Parameters In `daq.env`

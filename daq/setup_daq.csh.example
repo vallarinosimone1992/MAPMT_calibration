@@ -1,0 +1,21 @@
+# Copy this file to setup_daq.csh on the DAQ machine, edit the paths, then run:
+#   source setup_daq.csh
+#
+# The DAQ wrappers themselves are bash scripts. This file is only for users
+# whose login shell is csh/tcsh.
+
+setenv MAPMT_SUITE "/path/to/MAPMT_daq_only"
+
+# Compatibility for DAQ commands or legacy helper code that still looks for
+# RICH_SUITE.
+setenv RICH_SUITE "$MAPMT_SUITE"
+
+# Optional: point the bash DAQ wrappers to their configuration file.
+setenv MAPMT_DAQ_CONFIG "$MAPMT_SUITE/daq/daq.env"
+
+# Optional: if the ssptest_* commands are not already in PATH, uncomment and
+# adapt this path. Keep daq.env in sync with the same directory.
+# setenv MAPMT_DAQ_EXEDIR "$CODA/src/rol/Linux_i686_vme/bin"
+# set path = ( "$MAPMT_DAQ_EXEDIR" $path )
+
+cd "$MAPMT_SUITE/daq"
